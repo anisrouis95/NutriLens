@@ -4,10 +4,22 @@ import { translations } from '@/locales/translations';
 
 export type Language = 'en' | 'fr';
 
+type Params = Record<string, string | number>;
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Params) => string;
+  /** Picks the current language from a { en, fr } content object. */
+  L: (text: { en: string; fr: string } | undefined, params?: Params) => string;
+}
+
+/** Replaces {{name}} tokens; unknown tokens are left as-is. */
+export function interpolate(text: string, params?: Params): string {
+  if (!params) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (match, name) =>
+    params[name] !== undefined ? String(params[name]) : match,
+  );
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(
@@ -45,7 +57,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Translation function
-  const t = (key: string): string => {
+  const t = (key: string, params?: Params): string => {
     const keys = key.split('.');
     let value: any = translations[language];
 
@@ -53,13 +65,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       value = value?.[k];
     }
 
-    return typeof value === 'string' ? value : key;
+    return typeof value === 'string' ? interpolate(value, params) : key;
   };
+
+  const L = (text: { en: string; fr: string } | undefined, params?: Params) =>
+    text ? interpolate(text[language] || text.en, params) : '';
 
   const value: LanguageContextType = {
     language,
     setLanguage,
     t,
+    L,
   };
 
   return (

@@ -18,6 +18,10 @@ export const translations = {
     track: 'Track',
     stats: 'Stats',
     settings: 'Settings',
+    food: 'Food',
+    train: 'Train',
+    learn: 'Learn',
+    scan: 'Scan',
 
     // Home Screen
     hello: 'Hello',
@@ -204,7 +208,7 @@ export const translations = {
     privacyPolicy: 'Privacy Policy',
     privacyPolicyDesc: 'How we handle your data',
     aboutSupport: 'About & Support',
-    aboutApp: 'About NutriTrack',
+    aboutApp: 'About NutriLens',
     version: 'Version 1.0.0',
     dangerZone: 'Danger Zone',
     resetAllData: 'Reset All Data',
@@ -228,7 +232,7 @@ export const translations = {
     reset: 'Reset',
     dataReset: 'Data Reset',
     dataResetMessage: 'All data has been reset.',
-    aboutTitle: 'About NutriTrack',
+    aboutTitle: 'About NutriLens',
     aboutMessage:
       'Version 1.0.0\\n\\nA comprehensive nutrition and fasting tracking app to help you achieve your health goals.',
   },
@@ -251,6 +255,10 @@ export const translations = {
     track: 'Suivre',
     stats: 'Statistiques',
     settings: 'Paramètres',
+    food: 'Repas',
+    train: 'Sport',
+    learn: 'Apprendre',
+    scan: 'Scanner',
 
     // Home Screen
     hello: 'Bonjour',
@@ -443,7 +451,7 @@ export const translations = {
     privacyPolicy: 'Politique de Confidentialité',
     privacyPolicyDesc: 'Comment nous gérons vos données',
     aboutSupport: 'À Propos & Support',
-    aboutApp: 'À Propos de NutriTrack',
+    aboutApp: 'À Propos de NutriLens',
     version: 'Version 1.0.0',
     dangerZone: 'Zone de Danger',
     resetAllData: 'Réinitialiser Toutes les Données',
@@ -468,7 +476,7 @@ export const translations = {
     reset: 'Réinitialiser',
     dataReset: 'Données Réinitialisées',
     dataResetMessage: 'Toutes les données ont été réinitialisées.',
-    aboutTitle: 'À Propos de NutriTrack',
+    aboutTitle: 'À Propos de NutriLens',
     aboutMessage:
       'Version 1.0.0\\n\\nUne application complète de suivi nutritionnel et de jeûne pour vous aider à atteindre vos objectifs de santé.',
   },

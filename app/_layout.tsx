@@ -1,16 +1,22 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useFonts } from 'expo-font';
 import {
   DarkTheme,
-  DefaultTheme,
+  Stack,
   ThemeProvider as NavigationThemeProvider,
-} from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+  useRouter,
+  useSegments,
+} from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import * as SystemUI from 'expo-system-ui';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useMemo } from 'react';
+import { Platform } from 'react-native';
 
-import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { AppDataProvider, useAppData } from '@/contexts/AppDataContext';
+import { SnackbarProvider } from '@/components/ds';
+import { fontAssets, useTokens } from '@/theme';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -18,31 +24,93 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Web-preview-only noise from react-native-body-highlighter on react-native-svg:
+// `accessible` on SVG nodes and responder handlers on its pressable paths. Both
+// are correct on Android; LogBox.ignoreLogs is a no-op on web, so filter here.
+if (Platform.OS === 'web' && __DEV__) {
+  const consoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    const message = typeof args[0] === 'string' ? args[0] : '';
+    const svgNoise =
+      (message.includes('for a non-boolean attribute') && args.includes('accessible')) ||
+      (message.startsWith('Unknown event handler property') && String(args[1]).includes('Responder'));
+    if (!svgNoise) consoleError(...args);
+  };
+}
+
 function RootLayoutNav() {
-  const { currentTheme } = useTheme();
+  const t = useTokens();
+  const { ready, profile } = useAppData();
+  const segments = useSegments();
+  const router = useRouter();
+
+  // Paint the window behind every screen in the theme's ground (no white flash).
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(t.ground);
+  }, [t.ground]);
+
+  // First launch (or after a reset): send the user to the questionnaire.
+  useEffect(() => {
+    if (!ready) return;
+    const inOnboarding = segments[0] === 'onboarding';
+    if (!profile && !inOnboarding) router.replace('/onboarding');
+  }, [ready, profile, segments, router]);
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  const navTheme = useMemo(() => {
+    const base = DarkTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: t.accent,
+        background: t.ground,
+        card: t.surfaceLow,
+        text: t.text,
+        border: t.hairline,
+        notification: t.danger,
+      },
+    };
+  }, [t]);
+
+  if (!ready) return null;
 
   return (
-    <NavigationThemeProvider
-      value={currentTheme === 'dark' ? DarkTheme : DefaultTheme}
-    >
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+    <NavigationThemeProvider value={navTheme}>
+      <StatusBar style="light" />
+      <SnackbarProvider>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.ground } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
+          <Stack.Screen name="plan" />
+          <Stack.Screen name="scan" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="progress" />
+          <Stack.Screen name="profile" />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="fasting" />
+          <Stack.Screen name="library" />
+          <Stack.Screen name="exercise/[id]" />
+          <Stack.Screen name="workout/[dayId]" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="learn/[id]" />
+          <Stack.Screen name="coach" />
+        </Stack>
+      </SnackbarProvider>
     </NavigationThemeProvider>
   );
 }
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    ...fontAssets,
     ...FontAwesome.font,
   });
 
@@ -51,21 +119,15 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
     return null;
   }
 
   return (
-    <ThemeProvider>
-      <LanguageProvider>
+    <LanguageProvider>
+      <AppDataProvider>
         <RootLayoutNav />
-      </LanguageProvider>
-    </ThemeProvider>
+      </AppDataProvider>
+    </LanguageProvider>
   );
 }

@@ -1,0 +1,716 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T10:01:43.119Z",
+  "title": "Design System: NutriLens",
+  "extensions": {
+    "platform": "Android (Expo SDK 57, React Native). Sizes are dp/sp. Tokens live in theme/tokens.ts and are read with useTokens(). One dark world only.",
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground Black",
+        "canonical": "#0A0A0A",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "surfaceLow": {
+        "role": "neutral",
+        "displayName": "Graphite Low",
+        "canonical": "#101010",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#141414",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "surfaceHigh": {
+        "role": "neutral",
+        "displayName": "Graphite High",
+        "canonical": "#1F1F1F",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "pressed": {
+        "role": "neutral",
+        "displayName": "Pressed Graphite",
+        "canonical": "#2A2A2A",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "track": {
+        "role": "neutral",
+        "displayName": "Track",
+        "canonical": "#262626",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#232323",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "canonical": "#3A3A3A",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "textDisabled": {
+        "role": "neutral",
+        "displayName": "Disabled Ink",
+        "canonical": "#5C5C5C",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "textTertiary": {
+        "role": "neutral",
+        "displayName": "Tertiary Ink",
+        "canonical": "#8A8A8A",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "textSecondary": {
+        "role": "neutral",
+        "displayName": "Secondary Ink",
+        "canonical": "#B3B3B3",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Off-White Ink",
+        "canonical": "#F5F5F5",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Volt",
+        "canonical": "#D9FF3D",
+        "tonalRamp": [
+          "#3E4D00",
+          "#6B8500",
+          "#98BD00",
+          "#C5F500",
+          "#D7FF33",
+          "#E2FF6B",
+          "#EEFFA8",
+          "#FAFFE5"
+        ]
+      },
+      "accentStrong": {
+        "role": "primary",
+        "displayName": "Volt Pressed",
+        "canonical": "#C6EC2A",
+        "tonalRamp": [
+          "#3A4606",
+          "#647A0B",
+          "#8EAD0F",
+          "#B9E114",
+          "#CDEE44",
+          "#DBF377",
+          "#EAF8AF",
+          "#F9FDE8"
+        ]
+      },
+      "accentDeep": {
+        "role": "primary",
+        "displayName": "Deep Volt",
+        "canonical": "#9DBF1C",
+        "tonalRamp": [
+          "#37430A",
+          "#5F7411",
+          "#87A518",
+          "#AFD61F",
+          "#C5E54D",
+          "#D5EC7E",
+          "#E6F4B3",
+          "#F8FCE9"
+        ]
+      },
+      "accentSoft": {
+        "role": "primary",
+        "displayName": "Volt Wash",
+        "canonical": "#1D2309",
+        "tonalRamp": [
+          "#323D10",
+          "#57691B",
+          "#7C9627",
+          "#A1C332",
+          "#B9D55D",
+          "#CDE189",
+          "#E1EDBA",
+          "#F6FAEB"
+        ]
+      },
+      "accentText": {
+        "role": "primary",
+        "displayName": "Volt Ink",
+        "canonical": "#D9FF3D",
+        "tonalRamp": [
+          "#3E4D00",
+          "#6B8500",
+          "#98BD00",
+          "#C5F500",
+          "#D7FF33",
+          "#E2FF6B",
+          "#EEFFA8",
+          "#FAFFE5"
+        ]
+      },
+      "onAccent": {
+        "role": "primary",
+        "displayName": "Ink On Volt",
+        "canonical": "#0A0A0A",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "select": {
+        "role": "secondary",
+        "displayName": "Inverted White",
+        "canonical": "#F5F5F5",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "onSelect": {
+        "role": "secondary",
+        "displayName": "Ink On White",
+        "canonical": "#0A0A0A",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "protein": {
+        "role": "tertiary",
+        "displayName": "Protein Coral",
+        "canonical": "#FF7A59",
+        "tonalRamp": [
+          "#4D0F00",
+          "#851A00",
+          "#BD2600",
+          "#F53100",
+          "#FF5C33",
+          "#FF896B",
+          "#FFBAA8",
+          "#FFEBE5"
+        ]
+      },
+      "carbs": {
+        "role": "tertiary",
+        "displayName": "Carbs Sky",
+        "canonical": "#4FC3F7",
+        "tonalRamp": [
+          "#033449",
+          "#06597F",
+          "#087FB4",
+          "#0BA5EA",
+          "#3CBCF6",
+          "#72CFF9",
+          "#ACE3FB",
+          "#E7F7FE"
+        ]
+      },
+      "fat": {
+        "role": "tertiary",
+        "displayName": "Fat Lilac",
+        "canonical": "#B794F6",
+        "tonalRamp": [
+          "#1D0647",
+          "#320A7A",
+          "#480FAE",
+          "#5D13E2",
+          "#8043EF",
+          "#A377F4",
+          "#C9AFF8",
+          "#EFE7FD"
+        ]
+      },
+      "success": {
+        "role": "state",
+        "displayName": "Success Volt",
+        "canonical": "#D9FF3D",
+        "tonalRamp": [
+          "#3E4D00",
+          "#6B8500",
+          "#98BD00",
+          "#C5F500",
+          "#D7FF33",
+          "#E2FF6B",
+          "#EEFFA8",
+          "#FAFFE5"
+        ]
+      },
+      "danger": {
+        "role": "state",
+        "displayName": "Danger Red",
+        "canonical": "#FF5A4E",
+        "tonalRamp": [
+          "#4D0500",
+          "#850900",
+          "#BD0D00",
+          "#F51100",
+          "#FF4133",
+          "#FF756B",
+          "#FFAEA8",
+          "#FFE7E5"
+        ]
+      },
+      "dangerSoft": {
+        "role": "state",
+        "displayName": "Danger Wash",
+        "canonical": "#2E1210",
+        "tonalRamp": [
+          "#391614",
+          "#622622",
+          "#8C3731",
+          "#B6473F",
+          "#CA6E68",
+          "#D99691",
+          "#E9C1BF",
+          "#F8EDEC"
+        ]
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim",
+        "canonical": "rgba(0, 0, 0, 0.72)",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      },
+      "shadow": {
+        "role": "neutral",
+        "displayName": "Shadow Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5E5E5E",
+          "#7A7A7A",
+          "#999999",
+          "#B5B5B5",
+          "#D4D4D4",
+          "#F2F2F2"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "display",
+        "purpose": "Session name on the workout card; exercise name on its photo fade."
+      },
+      "headline": {
+        "displayName": "headline",
+        "purpose": "Large collapsing screen title."
+      },
+      "title": {
+        "displayName": "title",
+        "purpose": "Section, bar and sheet titles; the KCAL LEFT unit."
+      },
+      "titleSmall": {
+        "displayName": "titleSmall",
+        "purpose": "Card-level headings in Inter-led content."
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "Lessons, coach answers, explanations."
+      },
+      "bodyStrong": {
+        "displayName": "bodyStrong",
+        "purpose": "List and option titles."
+      },
+      "label": {
+        "displayName": "label",
+        "purpose": "Chips, segments, field labels, small actions."
+      },
+      "caption": {
+        "displayName": "caption",
+        "purpose": "Supporting lines, empty-state bodies, footnotes."
+      },
+      "overline": {
+        "displayName": "overline",
+        "purpose": "Data labels, units, the date line, status tags. Never a kicker."
+      },
+      "numHero": {
+        "displayName": "numHero",
+        "purpose": "Calories left, fasting clock, ruler value."
+      },
+      "numLarge": {
+        "displayName": "numLarge",
+        "purpose": "Macro columns, rest clock, stats, volumes."
+      },
+      "numMedium": {
+        "displayName": "numMedium",
+        "purpose": "Inline figures, tabular."
+      },
+      "numSmall": {
+        "displayName": "numSmall",
+        "purpose": "Small inline figures, tabular."
+      },
+      "button": {
+        "displayName": "button",
+        "purpose": "Every button label, uppercase, +0.6 tracking."
+      }
+    },
+    "shadows": [
+      {
+        "name": "fab-lift",
+        "value": "0 6px 14px rgba(0,0,0,0.45)",
+        "purpose": "Floating camera FAB only (Android elevation 8)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "fast",
+        "value": "160ms",
+        "purpose": "Small state changes, press feedback."
+      },
+      {
+        "name": "base",
+        "value": "220ms",
+        "purpose": "Default state transitions: chips, fields, nav pill, disclosure."
+      },
+      {
+        "name": "slow",
+        "value": "320ms",
+        "purpose": "Sheets and snackbars entering, story segment fills."
+      },
+      {
+        "name": "count",
+        "value": "650ms",
+        "purpose": "Numbers counting to their value."
+      },
+      {
+        "name": "easeOut",
+        "value": "Easing.out(Easing.exp), approx. cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Every state change."
+      },
+      {
+        "name": "easeInOut",
+        "value": "Easing.inOut(Easing.cubic)",
+        "purpose": "Symmetric transitions."
+      },
+      {
+        "name": "pressSpring",
+        "value": "damping 18, stiffness 320, mass 0.6",
+        "purpose": "Touch feedback only (0.97 press scale, segmented indicator)."
+      },
+      {
+        "name": "settleSpring",
+        "value": "damping 14, stiffness 120, mass 1",
+        "purpose": "Stamp landing, FAB entrance."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "instant cuts and crossfades",
+        "purpose": "Replaces every movement when the system removes animations."
+      }
+    ],
+    "imagery": [
+      {
+        "name": "exercise-photos",
+        "source": "free-exercise-db (github.com/yuhonas/free-exercise-db), public domain (Unlicense)",
+        "note": "Loaded at runtime and cached on disk; start and end positions."
+      },
+      {
+        "name": "app-icon-and-splash",
+        "source": "assets/images/icon-source.mjs",
+        "note": "Generated rasters with embedded provenance (embed-prompt scan: 5 rasters, 0 missing). Owner-approved artwork on #12150F, intentionally not recolored to the Kinetic Black palette."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Filled Button",
+      "kind": "button",
+      "refersTo": "button-filled",
+      "description": "The one volt action of a screen: START WORKOUT, LOG SET.",
+      "html": "<button class=\"ds-btn-filled\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"#0A0A0A\"><path d=\"M6 4l14 8-14 8z\"/></svg>Start workout</button>",
+      "css": ".ds-btn-filled { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 24px; border: none; border-radius: 999px; background: #D9FF3D; color: #0A0A0A; font-family: Inter, sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-filled:hover { background: #C6EC2A; } .ds-btn-filled:active { background: #C6EC2A; transform: scale(0.97); } .ds-btn-filled:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 2px; }"
+    },
+    {
+      "name": "Tonal Button",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "Secondary action on graphite; a session already done today.",
+      "html": "<button class=\"ds-btn-tonal\">See your program</button>",
+      "css": ".ds-btn-tonal { height: 48px; padding: 0 24px; border: none; border-radius: 999px; background: #1F1F1F; color: #F5F5F5; font-family: Inter, sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; cursor: pointer; transition: background 160ms ease-out, transform 160ms ease-out; } .ds-btn-tonal:hover, .ds-btn-tonal:active { background: #2A2A2A; } .ds-btn-tonal:active { transform: scale(0.97); } .ds-btn-tonal:focus-visible { outline: 2px solid #D9FF3D; outline-offset: 2px; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Quiet exits such as Finish in the workout band.",
+      "html": "<button class=\"ds-btn-outlined\">Finish</button>",
+      "css": ".ds-btn-outlined { height: 48px; padding: 0 24px; border: 1px solid #3A3A3A; border-radius: 999px; background: transparent; color: #F5F5F5; font-family: Inter, sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; cursor: pointer; transition: background 160ms ease-out; } .ds-btn-outlined:hover, .ds-btn-outlined:active { background: #141414; } .ds-btn-outlined:focus-visible { outline: 2px solid #D9FF3D; outline-offset: 2px; }"
+    },
+    {
+      "name": "Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Filter and choice pills; selection is inverted white.",
+      "html": "<div class=\"ds-chip-row\"><button class=\"ds-chip\">Dumbbells</button><button class=\"ds-chip ds-chip--on\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#0A0A0A\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6L9 17l-5-5\"/></svg>Barbell</button></div>",
+      "css": ".ds-chip-row { display: flex; gap: 8px; flex-wrap: wrap; } .ds-chip { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid #232323; border-radius: 999px; background: #1F1F1F; color: #F5F5F5; font: 600 14px/19px Inter, sans-serif; cursor: pointer; transition: background 220ms ease-out, border-color 220ms ease-out, color 220ms ease-out; } .ds-chip:hover { background: #2A2A2A; } .ds-chip--on, .ds-chip--on:hover { background: #F5F5F5; border-color: #F5F5F5; color: #0A0A0A; } .ds-chip:focus-visible { outline: 2px solid #D9FF3D; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Graphite field whose stroke turns volt on focus.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Body weight</span><span class=\"ds-field-box\"><input class=\"ds-field-input\" value=\"72.5\"><span class=\"ds-field-unit\">kg</span></span></label>",
+      "css": ".ds-field { display: block; } .ds-field-label { display: block; margin-bottom: 4px; color: #B3B3B3; font: 600 14px/19px Inter, sans-serif; } .ds-field-box { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 16px; border: 1px solid #3A3A3A; border-radius: 14px; background: #141414; transition: border-color 220ms ease-out; } .ds-field-box:hover { border-color: #8A8A8A; } .ds-field-box:focus-within { border-color: #D9FF3D; } .ds-field-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: #F5F5F5; caret-color: #D9FF3D; font: 400 16px/24px Inter, sans-serif; } .ds-field-unit { color: #8A8A8A; font: 600 14px/19px Inter, sans-serif; }"
+    },
+    {
+      "name": "Navigation Bar",
+      "kind": "nav",
+      "refersTo": "nav-bar",
+      "description": "Today, Train, Food, Learn with a graphite active pill.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item--on\" href=\"#\"><span class=\"ds-nav-pill\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\"/></svg></span>Today</a><a class=\"ds-nav-item\" href=\"#\"><span class=\"ds-nav-pill\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12\"/></svg></span>Train</a><a class=\"ds-nav-item\" href=\"#\"><span class=\"ds-nav-pill\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M3 12h18a9 9 0 0 1-18 0zM8 8c1-2 3-3 4-3M14 8c0-2 2-3 4-3\"/></svg></span>Food</a><a class=\"ds-nav-item\" href=\"#\"><span class=\"ds-nav-pill\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z\"/></svg></span>Learn</a></nav>",
+      "css": ".ds-nav { display: flex; height: 80px; padding-top: 12px; background: #0A0A0A; border-top: 1px solid #232323; } .ds-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A8A; text-decoration: none; font: 500 12px/16px Inter, sans-serif; } .ds-nav-pill { display: flex; align-items: center; justify-content: center; width: 64px; height: 32px; border-radius: 999px; transition: background 220ms ease-out; } .ds-nav-item:hover .ds-nav-pill { background: #141414; } .ds-nav-item--on { color: #F5F5F5; font-weight: 700; } .ds-nav-item--on .ds-nav-pill, .ds-nav-item--on:hover .ds-nav-pill { background: #1F1F1F; } .ds-nav-item:focus-visible { outline: 2px solid #D9FF3D; outline-offset: -2px; }"
+    },
+    {
+      "name": "Workout Card",
+      "kind": "card",
+      "refersTo": "card-workout",
+      "description": "Photo session card that leads Today and Train (photo stood in by a graphite gradient here).",
+      "html": "<article class=\"ds-wcard\"><div class=\"ds-wcard-body\"><h2 class=\"ds-wcard-name\">Upper body A</h2><p class=\"ds-wcard-meta\">6 exercises · ~55 min</p><button class=\"ds-wcard-cta\">Start workout</button></div></article>",
+      "css": ".ds-wcard { position: relative; height: 264px; border-radius: 20px; overflow: hidden; background: linear-gradient(180deg, rgba(10,10,10,0) 18%, rgba(10,10,10,0.55) 50%, rgba(10,10,10,0.94) 100%), linear-gradient(135deg, #3A3A3A, #1F1F1F); } .ds-wcard-body { position: absolute; left: 18px; right: 18px; bottom: 16px; } .ds-wcard-name { margin: 0 0 2px; color: #F5F5F5; font: 400 40px/44px Anton, sans-serif; letter-spacing: 0.2px; text-transform: uppercase; } .ds-wcard-meta { margin: 0; color: #B3B3B3; font: 600 14px/19px Inter, sans-serif; } .ds-wcard-cta { margin-top: 12px; height: 48px; padding: 0 24px; border: none; border-radius: 999px; background: #D9FF3D; color: #0A0A0A; font-family: Inter, sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.6px; text-transform: uppercase; cursor: pointer; transition: background 160ms ease-out, transform 160ms ease-out; } .ds-wcard-cta:hover { background: #C6EC2A; } .ds-wcard-cta:active { transform: scale(0.97); } .ds-wcard-cta:focus-visible { outline: 2px solid #F5F5F5; outline-offset: 2px; }"
+    },
+    {
+      "name": "Set Row",
+      "kind": "custom",
+      "refersTo": "stamp-check-done",
+      "description": "Set table row: overline set name, Anton number inputs (current set in volt), round stamp check.",
+      "html": "<div class=\"ds-set\"><span class=\"ds-set-n\">Set 2</span><span class=\"ds-set-num\"><input value=\"40\"><small>kg</small></span><span class=\"ds-set-num\"><input value=\"10\"><small>reps</small></span><button class=\"ds-stamp\" aria-label=\"Set 2 done\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6L9 17l-5-5\"/></svg></button></div>",
+      "css": ".ds-set { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 0 20px; border-bottom: 1px solid #232323; background: #0A0A0A; } .ds-set-n { width: 60px; color: #F5F5F5; font: 800 12px/16px Inter, sans-serif; letter-spacing: 1px; text-transform: uppercase; } .ds-set-num { flex: 1; display: flex; align-items: baseline; gap: 4px; margin: 8px 0; border-bottom: 1px solid #3A3A3A; transition: border-color 220ms ease-out; } .ds-set-num:focus-within { border-color: #D9FF3D; } .ds-set-num input { width: 60px; border: none; outline: none; background: transparent; color: #D9FF3D; caret-color: #D9FF3D; font: 400 30px/38px Anton, sans-serif; } .ds-set-num small { color: #8A8A8A; font: 800 12px/16px Inter, sans-serif; letter-spacing: 1px; text-transform: uppercase; } .ds-stamp { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid #3A3A3A; background: transparent; color: #B3B3B3; cursor: pointer; transition: background 160ms ease-out, transform 160ms ease-out; } .ds-stamp:hover { border-color: #D9FF3D; background: #D9FF3D; color: #0A0A0A; } .ds-stamp:active { transform: scale(0.9); } .ds-stamp:focus-visible { outline: 2px solid #D9FF3D; outline-offset: 2px; }"
+    },
+    {
+      "name": "Story Bars",
+      "kind": "custom",
+      "refersTo": "story-bars",
+      "description": "One segment per exercise, session or step; fills volt, the current track brightens.",
+      "html": "<div class=\"ds-story\"><span class=\"ds-seg\"><i style=\"width:100%\"></i></span><span class=\"ds-seg\"><i style=\"width:100%\"></i></span><span class=\"ds-seg ds-seg--now\"><i style=\"width:40%\"></i></span><span class=\"ds-seg\"><i style=\"width:0\"></i></span><span class=\"ds-seg\"><i style=\"width:0\"></i></span></div>",
+      "css": ".ds-story { display: flex; gap: 4px; padding: 10px 0; background: #0A0A0A; } .ds-seg { flex: 1; height: 4px; border-radius: 2px; background: #262626; overflow: hidden; cursor: pointer; transition: background 220ms ease-out; } .ds-seg:hover { background: #2A2A2A; } .ds-seg--now { background: #3A3A3A; } .ds-seg i { display: block; height: 100%; border-radius: 2px; background: #D9FF3D; transition: width 320ms cubic-bezier(0.16,1,0.3,1); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Kinetic Black",
+    "overview": "NutriLens is a training app first, and it looks like the best of its category: a black ground, graphite surfaces, off-white ink, and a single volt accent that means \"act, progress, now\". The next workout is the hero of every day; inside a session each exercise fills the screen with its demo photo fading into black, its name set in condensed Anton capitals on that fade, and logging a set is one large volt tap. Calories and macros sit one glance below the training, told in the same big Anton numerals.\n\nThe system plays the category standard straight rather than inventing a private metaphor. Density is generous where the hand is busy (64dp set rows, 56dp dock buttons, 48dp minimum targets for sweaty hands under gym light) and compact where the eye only checks (tracked 12sp labels, slim progress lines). It is dark only: black with white and volt ink holds up under gym fluorescents, in a dark room at night and in daylight glare, so there is no light scheme.\n\nMotion serves feedback, never decoration: exponential ease-out at 160, 220 and 320ms for state changes, a quick spring only under the finger, numbers that count to their value, bars that grow once, horizontal page slides between exercises. When the system asks for reduced motion, every one of these becomes an instant cut or a crossfade.",
+    "keyCharacteristics": [
+      "Black ground, graphite tonal layers, no decorative color.",
+      "One volt accent for every action, every progress fill and the current set.",
+      "Selection is inverted ink: white pill, black text.",
+      "Anton uppercase for titles and every big number; Inter for words and small data.",
+      "Full-bleed exercise photography fading into the ground.",
+      "Pills for actions, 20dp corners on photo cards, 14dp on containers.",
+      "Story bars carry progress across a session, a week, a questionnaire."
+    ],
+    "rules": [
+      {
+        "name": "The One Volt Rule",
+        "body": "Volt means act, progress or now: buttons, fills, the current set, done stamps. It never decorates, never fills a background panel, and never marks selection or data.",
+        "section": "colors"
+      },
+      {
+        "name": "The Inverted Selection Rule",
+        "body": "What the user has chosen turns white with black ink. A selected chip or segment is never volt.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data Ink Rule",
+        "body": "Coral, sky and lilac belong to protein, carbs and fat. Nothing else borrows them, and they never sit on a button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Graphite Calm Rule",
+        "body": "Things that are merely present (the active nav destination, past days, completed-but-not-current bars, the burn strata of the plan) step through graphite, so the one volt element on screen stays findable at a glance.",
+        "section": "colors"
+      },
+      {
+        "name": "The Anton Numbers Rule",
+        "body": "Titles and every number meant to be read at a glance are Anton capitals. Anton never sets a sentence, a caption or a label.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tracked Label Rule",
+        "body": "Overline labels name data, units or state next to the thing they describe. They are never a decorative kicker stacked above a heading.",
+        "section": "typography"
+      },
+      {
+        "name": "The Heavy Capitals Rule",
+        "body": "Buttons speak in ExtraBold tracked capitals at 14 to 15sp; nothing else in the UI shouts in Inter capitals except overline labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Gutter Rule",
+        "body": "Content aligns to the 20dp gutter; only photography and the workout band are allowed to run past it.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Black Rule",
+        "body": "Surfaces are flat; a raised thing is a lighter graphite, not a shadow. A second shadowed element needs a reason as strong as floating over scroll.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Fade-To-Ground Rule",
+        "body": "Photographs end in the ground color through a gradient so Anton text can sit on them: the workout card fades from clear to 94% black, the exercise page fades its lower 40% fully into the ground.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Pill-For-Action Rule",
+        "body": "If it is pressed to do something, it is a pill or a circle; rectangles with soft corners are containers.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** read every color from useTokens(); screens never hold raw hex.",
+      "**Do** keep one volt element as the obvious next action on each screen (START WORKOUT, LOG SET, the camera FAB).",
+      "**Do** set titles and glance numbers in Anton capitals and everything else in Inter.",
+      "**Do** fade photographs into the ground (#0A0A0A) before placing text on them.",
+      "**Do** keep touch targets at 48dp or more, and 56dp for the action used mid-set.",
+      "**Do** use exponential ease-out at 160, 220 or 320ms for state changes and swap to instant cuts or crossfades when animations are removed.",
+      "**Do** show selection as a white pill with black ink."
+    ],
+    "donts": [
+      "**Don't** use volt for selection, decoration, backgrounds or data series.",
+      "**Don't** use coral, sky or lilac for anything but protein, carbs and fat.",
+      "**Don't** add a light scheme; Kinetic Black is dark only.",
+      "**Don't** add shadows to cards, sheets or buttons; only the floating FAB casts one.",
+      "**Don't** set sentences, captions or labels in Anton, or buttons in mixed case.",
+      "**Don't** stack an overline label above a heading as a decorative kicker.",
+      "**Don't** recolor the owner's app icon to match the palette."
+    ]
+  }
+}
