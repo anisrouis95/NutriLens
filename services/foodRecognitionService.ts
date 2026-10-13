@@ -1,6 +1,7 @@
 // Food recognition from a photo or a text description, powered by Gemini.
 
 import { generateJSON, imageToBase64 } from '@/services/gemini';
+import { aiLanguageName, type Language } from '@/lib/i18n';
 
 export type Confidence = 'high' | 'medium' | 'low';
 
@@ -71,7 +72,7 @@ const SCHEMA = {
   required: ['is_food', 'dish_name', 'items'],
 };
 
-function systemPrompt(language: 'en' | 'fr') {
+function systemPrompt(language: Language) {
   return `You are the nutrition analyst inside a calorie-tracking app. The user lives in Tunisia and is learning to track calories for the first time, so accuracy matters more than politeness.
 
 Identify every food and drink and estimate each portion's edible weight in grams and its nutrition for THAT portion.
@@ -85,7 +86,7 @@ Rules:
 - Prefer realistic home-cooked or café portions over "diet" portions.
 - If you are unsure between two foods, choose the most likely and mention the alternative in notes, with confidence "low".
 - If the image or text contains no food or drink, set is_food to false and return an empty items list.
-- Write every name, note and tip in ${language === 'fr' ? 'French' : 'English'}.`;
+- Write every name, note and tip in ${aiLanguageName(language)}.`;
 }
 
 let counter = 0;
@@ -114,7 +115,7 @@ function normalize(raw: RawResult): RecognitionResult {
 
 export async function recognizeFoodFromPhoto(
   imageUri: string,
-  language: 'en' | 'fr',
+  language: Language,
   hint?: string,
 ): Promise<RecognitionResult> {
   const data = await imageToBase64(imageUri);
@@ -136,7 +137,7 @@ export async function recognizeFoodFromPhoto(
 
 export async function recognizeFoodFromText(
   description: string,
-  language: 'en' | 'fr',
+  language: Language,
 ): Promise<RecognitionResult> {
   const raw = await generateJSON<RawResult>({
     system: systemPrompt(language),

@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "NutriLens",
+    "name": "Tounsi Fit",
     "slug": "nutrilens",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nutrilens",
@@ -14,7 +14,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
-        "backgroundColor": "#12150F"
+        "backgroundColor": "#0A0A0A"
       },
       "package": "com.anisrouis.nutrilens",
       "permissions": [
@@ -29,7 +29,7 @@
         "android.permission.health.READ_DISTANCE",
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 3
+      "versionCode": 7
     },
     "web": {
       "bundler": "metro",
@@ -59,14 +59,14 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "NutriLens uses the camera to photograph meals and scan barcodes.",
+          "cameraPermission": "Tounsi Fit uses the camera to photograph meals and scan barcodes.",
           "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "NutriLens lets you pick a meal photo from your gallery."
+          "photosPermission": "Tounsi Fit lets you pick a meal photo from your gallery."
         }
       ],
       [

@@ -1,13 +1,14 @@
 import type { NutritionPlan, Profile } from '@/types';
+import { numberLocale, type Language } from '@/lib/i18n';
 
 /** Values substituted into lesson text placeholders like {{tdee}}. */
 export function planParams(
   plan: NutritionPlan | null,
   profile: Profile | null,
-  language: 'en' | 'fr',
+  language: Language,
 ): Record<string, string | number> {
   const fmt = (n: number, digits = 0) => {
-    const s = n.toLocaleString(language === 'fr' ? 'fr-FR' : 'en-US', {
+    const s = n.toLocaleString(numberLocale(language), {
       maximumFractionDigits: digits,
       minimumFractionDigits: digits,
     });

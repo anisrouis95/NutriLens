@@ -8,6 +8,7 @@ import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay
 import { useEffect } from 'react';
 import { motion, space, useTokens } from '@/theme';
 import { Txt, useFormat } from './primitives';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export interface PlanStratum {
   key: string;
@@ -37,9 +38,11 @@ function GrowBar({ fraction, delay, children }: { fraction: number; delay: numbe
     if (!reduce) p.value = withDelay(delay, withTiming(1, { duration: motion.slow * 2, easing: motion.easeOut }));
   }, [p, delay, reduce]);
   const grow = useAnimatedStyle(() => ({ transform: [{ scaleX: p.value }] }));
+  // Grows from the reading start (right to left in Darija's Arabic letters).
+  const origin = useLanguage().rtl ? 'right' : 'left';
   return (
     <View style={styles.track}>
-      <Animated.View style={[styles.bar, { width: `${Math.max(0, Math.min(1, fraction)) * 100}%` }, grow]}>{children}</Animated.View>
+      <Animated.View style={[styles.bar, { width: `${Math.max(0, Math.min(1, fraction)) * 100}%`, transformOrigin: origin }, grow]}>{children}</Animated.View>
     </View>
   );
 }
@@ -142,7 +145,7 @@ const styles = StyleSheet.create({
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm, marginBottom: space.sm },
   value: { fontSize: 44, lineHeight: 48 },
   track: { height: BAR },
-  bar: { height: BAR, borderRadius: BAR / 2, overflow: 'hidden', transformOrigin: 'left' },
+  bar: { height: BAR, borderRadius: BAR / 2, overflow: 'hidden' },
   parts: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', gap: 2 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg, rowGap: space.xs, marginTop: space.sm },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs + 2 },

@@ -1,5 +1,6 @@
 import { LocalFood, localFoods } from '@/data/foods';
 import type { FoodEntry, FoodSource, LocalizedText } from '@/types';
+import { pick, type Language } from '@/lib/i18n';
 
 export interface Per100 {
   kcal: number;
@@ -68,7 +69,7 @@ export const normalizeText = (s: string) =>
 
 const index = localFoods.map((food) => ({
   food,
-  terms: [food.name.en, food.name.fr, ...food.aliases].map(normalizeText),
+  terms: [food.name.en, food.name.fr, food.name.tn ?? '', food.name.tnLatn ?? '', ...food.aliases].filter(Boolean).map(normalizeText),
 }));
 
 export function searchLocalFoods(query: string, limit = 25): LocalFood[] {
@@ -110,9 +111,8 @@ export function fromPer100g(
 let keyCounter = 0;
 export const pendingKey = () => `p${Date.now()}_${keyCounter++}`;
 
-const pick = (t: LocalizedText, language: 'en' | 'fr') => t[language] || t.en;
 
-export function localToPending(food: LocalFood, language: 'en' | 'fr'): PendingFood {
+export function localToPending(food: LocalFood, language: Language): PendingFood {
   const servings = food.servings.map((s) => ({ label: pick(s.label, language), grams: s.grams }));
   return {
     key: pendingKey(),

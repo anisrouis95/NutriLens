@@ -16,6 +16,7 @@ import { BookOpenText, Camera, Dumbbell, House, Salad } from 'lucide-react-nativ
 import { fonts, motion, radius, space, useTokens } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Tap, Txt } from './primitives';
+import type { LocalizedText } from '@/lib/i18n';
 
 // Minimal shape of the props the router hands to a custom tab bar. Declared
 // locally so the app doesn't import navigation internals that SDK 58 moves.
@@ -27,11 +28,11 @@ export interface TabBarProps {
   };
 }
 
-const TABS: Record<string, { icon: typeof House; en: string; fr: string }> = {
-  index: { icon: House, en: 'Today', fr: 'Aujourd’hui' },
-  food: { icon: Salad, en: 'Food', fr: 'Repas' },
-  train: { icon: Dumbbell, en: 'Train', fr: 'Sport' },
-  learn: { icon: BookOpenText, en: 'Learn', fr: 'Apprendre' },
+const TABS: Record<string, LocalizedText & { icon: typeof House }> = {
+  index: { icon: House, en: 'Today', fr: 'Aujourd’hui', tn: 'اليوم', tnLatn: 'Lyoum' },
+  food: { icon: Salad, en: 'Food', fr: 'Repas', tn: 'ماكلة', tnLatn: 'Makla' },
+  train: { icon: Dumbbell, en: 'Train', fr: 'Sport', tn: 'تمرين', tnLatn: 'Sport' },
+  learn: { icon: BookOpenText, en: 'Learn', fr: 'Apprendre', tn: 'تعلّم', tnLatn: 'Ta3allem' },
 };
 
 export const NAV_BAR_HEIGHT = 80;
@@ -39,7 +40,7 @@ export const NAV_BAR_HEIGHT = 80;
 export function NavBar({ state, navigation }: TabBarProps) {
   const t = useTokens();
   const insets = useSafeAreaInsets();
-  const { language } = useLanguage();
+  const { L } = useLanguage();
   const routes = state.routes.filter((r) => TABS[r.name]);
   return (
     <View
@@ -52,7 +53,7 @@ export function NavBar({ state, navigation }: TabBarProps) {
       {routes.map((route) => {
         const focused = state.routes[state.index]?.key === route.key;
         const tab = TABS[route.name];
-        const label = language === 'fr' ? tab.fr : tab.en;
+        const label = L(tab);
         return (
           <NavItem
             key={route.key}

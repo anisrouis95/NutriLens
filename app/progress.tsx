@@ -23,10 +23,9 @@ type Range = '30' | '90' | '365';
 export default function ProgressScreen() {
   const t = useTokens();
   const fmt = useFormat();
-  const { L, language } = useLanguage();
+  const { L, language, weekdayName, formatDate } = useLanguage();
   const { weights, foods, plan, profile, adaptive, today, health, sessions } = useAppData();
   const [range, setRange] = useState<Range>('30');
-  const locale = language === 'fr' ? 'fr-FR' : 'en-US';
   const signed = (n: number, d = 2) => `${n > 0 ? '+' : ''}${fmt(n, d)}`;
 
   const trend = useMemo(() => weightTrend(weights), [weights]);
@@ -69,10 +68,10 @@ export default function ProgressScreen() {
       Array.from({ length: 7 }, (_, i) => {
         const date = addDays(today, i - 6);
         const consumed = Math.round(sumNutrition(foods.filter((f) => f.date === date)).calories);
-        const label = new Date(date + 'T12:00:00').toLocaleDateString(locale, { weekday: 'short' });
+        const label = weekdayName(new Date(date + 'T12:00:00'), 'short');
         return { label, consumed, date };
       }),
-    [foods, today, locale],
+    [foods, today, weekdayName],
   );
   const logged = week.filter((d) => d.consumed > 0 && d.date !== today);
   const avgIntake = logged.length ? logged.reduce((s, d) => s + d.consumed, 0) / logged.length : 0;
@@ -94,28 +93,28 @@ export default function ProgressScreen() {
   }).reverse();
   const trainingGoal = Math.max(profile?.trainingDays ?? 3, 1);
 
-  const shortDate = (date: string) => new Date(date + 'T12:00:00').toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  const shortDate = (date: string) => formatDate(new Date(date + 'T12:00:00'), { day: 'numeric', month: 'short' });
 
   return (
-    <Screen back title={L({ en: 'Progress', fr: 'Progression' })}>
-      <Section title={L({ en: 'Weight', fr: 'Poids' })} first>
+    <Screen back title={L({ en: 'Progress', fr: 'Progression', tn: 'التقدّم', tnLatn: 'Progrès' })}>
+      <Section title={L({ en: 'Weight', fr: 'Poids', tn: 'الوزن', tnLatn: 'Poids' })} first>
         <View style={styles.stats}>
           <Stat
             value={last ? fmt(last.trend, 1) : '—'}
             unit="kg"
-            caption={L({ en: 'Trend', fr: 'Tendance' })}
+            caption={L({ en: 'Trend', fr: 'Tendance', tn: 'الاتّجاه', tnLatn: 'Tendance' })}
             large
           />
           <Stat
             value={weeklyRate !== undefined ? signed(weeklyRate) : '—'}
             unit="kg"
-            caption={L({ en: 'Per week', fr: 'Par semaine' })}
+            caption={L({ en: 'Per week', fr: 'Par semaine', tn: 'في الجمعة', tnLatn: 'Fel jem3a' })}
             tone={onTrack ? 'success' : 'primary'}
           />
           <Stat
             value={plan ? signed(plan.weeklyChangeKg) : '—'}
             unit="kg"
-            caption={L({ en: 'Expected', fr: 'Prévu' })}
+            caption={L({ en: 'Expected', fr: 'Prévu', tn: 'المتوقّع', tnLatn: 'Prévu' })}
           />
         </View>
 
@@ -124,9 +123,9 @@ export default function ProgressScreen() {
             value={range}
             onChange={setRange}
             options={[
-              { value: '30', label: L({ en: '30 days', fr: '30 jours' }) },
-              { value: '90', label: L({ en: '90 days', fr: '90 jours' }) },
-              { value: '365', label: L({ en: '1 year', fr: '1 an' }) },
+              { value: '30', label: L({ en: '30 days', fr: '30 jours', tn: '30 يوم', tnLatn: '30 youm' }) },
+              { value: '90', label: L({ en: '90 days', fr: '90 jours', tn: '90 يوم', tnLatn: '90 youm' }) },
+              { value: '365', label: L({ en: '1 year', fr: '1 an', tn: '1 عام', tnLatn: '1 an' }) },
             ]}
           />
         </View>
@@ -141,7 +140,12 @@ export default function ProgressScreen() {
               profile?.targetWeightKg
                 ? {
                     y: profile.targetWeightKg,
-                    label: `${L({ en: 'goal', fr: 'objectif' })} ${fmt(profile.targetWeightKg, Number.isInteger(profile.targetWeightKg) ? 0 : 1)}`,
+                    label: `${L({
+                      en: 'goal',
+                      fr: 'objectif',
+                      tn: 'الهدف',
+                      tnLatn: 'objectif',
+                    })} ${fmt(profile.targetWeightKg, Number.isInteger(profile.targetWeightKg) ? 0 : 1)}`,
                     color: t.textSecondary,
                   }
                 : undefined
@@ -152,49 +156,70 @@ export default function ProgressScreen() {
             emptyText={L({
               en: 'Log your weight on at least 2 days to see the chart.',
               fr: 'Note ton poids au moins 2 jours pour voir la courbe.',
+              tn: 'سجّل وزنك 2 أيّام على الأقل باش تشوف الكورب.',
+              tnLatn: 'Sajjel poids mte3ek 2 iyyem 3al a9al bech tchouf el courbe.',
             })}
           />
         </View>
 
-        <Why title={L({ en: 'Dots or line?', fr: 'Points ou ligne ?' })} style={{ marginTop: space.lg }}>
+        <Why title={L({ en: 'Dots or line?', fr: 'Points ou ligne ?', tn: 'النقط ولّا الخطّ؟', tnLatn: 'Les points walla el 5att?' })} style={{ marginTop: space.lg }}>
           <Txt variant="body" tone="secondary">
             {L({
               en: 'Dots are your daily weigh-ins — they jump around with water, salt and food in your gut. The bright line is the smoothed trend: that is your real progress. Compare the line week to week, ignore single dots.',
               fr: 'Les points sont tes pesées du jour — ils bougent avec l’eau, le sel et ce qu’il y a dans ton ventre. La ligne vive est la tendance lissée : c’est ta vraie progression. Compare la ligne d’une semaine à l’autre, ignore les points isolés.',
+              tn: 'النقط هوما الوزن متاعك كل نهار — يطلعو وينزلو بالماء، الملح والماكلة اللي في كرشك. الخطّ اللي يضوّي هو الاتّجاه بلا تطلاع وتهباط: هذاك هو التقدّم الحقيقي متاعك. قارن الخطّ من جمعة لجمعة، وما تعطيش أهمية للنقط وحدها.',
+              tnLatn: 'Les points houma el poids mte3ek kol nhar — yotla3ou w yahbtou bel mé, el mel7 w el makla eli f kerchek. El 5att eli ydhawi howa el tendance lissée: hedheka howa el progrès el 7a9i9i mte3ek. 9aren el 5att men jem3a l jem3a, w ma ta3tich importance lel points wa7adhom.',
             })}
           </Txt>
         </Why>
       </Section>
 
-      <Section title={L({ en: 'Calories this week', fr: 'Calories cette semaine' })}>
+      <Section title={L({ en: 'Calories this week', fr: 'Calories cette semaine', tn: 'الكالوري الجمعة هاذي', tnLatn: 'Calories el jem3a hedhi' })}>
         <WeekBars days={week.map((d) => ({ label: d.label, value: d.consumed, today: d.date === today }))} target={target} />
         <Txt variant="caption" tone="tertiary" style={{ marginTop: space.sm }}>
-          {L({ en: 'Dashed line: your target. Today is the bright bar.', fr: 'Ligne pointillée : ta cible. Aujourd’hui, c’est la barre vive.' })}
+          {L({
+            en: 'Dashed line: your target. Today is the bright bar.',
+            fr: 'Ligne pointillée : ta cible. Aujourd’hui, c’est la barre vive.',
+            tn: 'الخطّ المقطّع: الهدف متاعك. اليوم هو العمود اللي يضوّي.',
+            tnLatn: 'El 5att el m9atta3: objectif mte3ek. Lyoum howa el barre eli tdhawi.',
+          })}
         </Txt>
         {logged.length ? (
           <View style={[styles.facts, { borderTopColor: t.hairline }]}>
-            <Stat value={fmt(avgIntake)} unit="kcal" caption={L({ en: 'Average on logged days', fr: 'Moyenne des jours notés' })} />
-            {plan ? <Stat value={fmt(plan.targetCalories)} unit="kcal" caption={L({ en: 'Target', fr: 'Cible' })} /> : null}
+            <Stat value={fmt(avgIntake)} unit="kcal" caption={L({
+              en: 'Average on logged days',
+              fr: 'Moyenne des jours notés',
+              tn: 'المعدّل في الأيّام المسجّلة',
+              tnLatn: 'Moyenne fel iyyem el msajla',
+            })} />
+            {plan ? <Stat value={fmt(plan.targetCalories)} unit="kcal" caption={L({ en: 'Target', fr: 'Cible', tn: 'الهدف', tnLatn: 'Objectif' })} /> : null}
           </View>
         ) : (
           <Txt variant="body" tone="secondary" style={{ marginTop: space.lg }}>
-            {L({ en: 'No full days logged this week yet.', fr: 'Aucune journée complète notée cette semaine.' })}
+            {L({
+              en: 'No full days logged this week yet.',
+              fr: 'Aucune journée complète notée cette semaine.',
+              tn: 'مازال ما سجّلت حتّى نهار كامل الجمعة هاذي.',
+              tnLatn: 'Mazel ma sajjelt 7atta nhar kemel el jem3a hedhi.',
+            })}
           </Txt>
         )}
       </Section>
 
-      <Section title={L({ en: 'Your real metabolism', fr: 'Ton vrai métabolisme' })}>
+      <Section title={L({ en: 'Your real metabolism', fr: 'Ton vrai métabolisme', tn: 'الميتابوليزم الحقيقي متاعك', tnLatn: 'Métabolisme el 7a9i9i mte3ek' })}>
         {adaptive && plan?.tdeeSource === 'adaptive' ? (
           <>
             <Txt variant="numLarge" tone="accent">
               {fmt(adaptive.tdee)}
-              <Txt variant="label" tone="tertiary">{` kcal / ${L({ en: 'day', fr: 'jour' })}`}</Txt>
+              <Txt variant="label" tone="tertiary">{` kcal / ${L({ en: 'day', fr: 'jour', tn: 'نهار', tnLatn: 'nhar' })}`}</Txt>
             </Txt>
             <Txt variant="body" tone="secondary" style={{ marginTop: space.sm }}>
               {L(
                 {
                   en: 'Measured from {{days}} logged days and {{w}} weigh-ins. Your targets now use this number instead of the formula.',
                   fr: 'Mesuré sur {{days}} jours notés et {{w}} pesées. Tes objectifs utilisent maintenant ce chiffre au lieu de la formule.',
+                  tn: 'محسوب من {{days}} نهار مسجّل و {{w}} وزن. الأهداف متاعك توّا تستعمل الرقم هذا في بلاصة الفورمول.',
+                  tnLatn: 'Ma7soub men {{days}} nhar msajjel w {{w}} pesées. Les objectifs mte3ek taw yesta3mlou el ra9m hedha fi blasset el formule.',
                 },
                 { days: adaptive.loggedDays, w: adaptive.weighIns },
               )}
@@ -204,23 +229,25 @@ export default function ProgressScreen() {
           <>
             <Txt variant="body" tone="secondary">
               {L({
-                en: 'Formulas are only estimates. Log your food and weigh yourself for a few weeks and NutriLens will calculate what YOUR body really burns.',
-                fr: 'Les formules ne sont que des estimations. Note tes repas et pèse-toi quelques semaines et NutriLens calculera ce que TON corps dépense vraiment.',
+                en: 'Formulas are only estimates. Log your food and weigh yourself for a few weeks and Tounsi Fit will calculate what YOUR body really burns.',
+                fr: 'Les formules ne sont que des estimations. Note tes repas et pèse-toi quelques semaines et Tounsi Fit calculera ce que TON corps dépense vraiment.',
+                tn: 'الفورمولات كان تقديرات. سجّل ماكلتك ووزن روحك كم جمعة و Tounsi Fit باش يحسب قدّاش بدنك إنت يحرق بالحقّ.',
+                tnLatn: 'Les formules ken estimations. Sajjel maklek w ouzen rou7ek kam jem3a w Tounsi Fit bech y7seb 9addech badnek ENTI y7ra9 bel 7a9.',
               })}
             </Txt>
             <View style={{ gap: space.lg, marginTop: space.lg }}>
-              <Meter label={L({ en: 'Days logged', fr: 'Jours notés' })} value={Math.min(loggedDays28, 14)} max={14} />
-              <Meter label={L({ en: 'Weigh-ins', fr: 'Pesées' })} value={Math.min(weighIns28, 6)} max={6} />
+              <Meter label={L({ en: 'Days logged', fr: 'Jours notés', tn: 'أيّام مسجّلة', tnLatn: 'Iyyem msajla' })} value={Math.min(loggedDays28, 14)} max={14} />
+              <Meter label={L({ en: 'Weigh-ins', fr: 'Pesées', tn: 'مرّات الوزن', tnLatn: 'Pesées' })} value={Math.min(weighIns28, 6)} max={6} />
             </View>
           </>
         )}
       </Section>
 
       {steps.length ? (
-        <Section title={L({ en: 'Steps · last 14 days', fr: 'Pas · 14 derniers jours' })}>
+        <Section title={L({ en: 'Steps · last 14 days', fr: 'Pas · 14 derniers jours', tn: 'الخطوات · آخر 14 يوم', tnLatn: 'Pas · ekher 14 youm' })}>
           <View style={styles.stats}>
-            <Stat value={fmt(avgSteps)} caption={L({ en: 'Daily average', fr: 'Moyenne par jour' })} large />
-            {plan ? <Stat value={fmt(plan.stepsTarget)} caption={L({ en: 'Target', fr: 'Cible' })} /> : null}
+            <Stat value={fmt(avgSteps)} caption={L({ en: 'Daily average', fr: 'Moyenne par jour', tn: 'المعدّل في النهار', tnLatn: 'Moyenne fel nhar' })} large />
+            {plan ? <Stat value={fmt(plan.stepsTarget)} caption={L({ en: 'Target', fr: 'Cible', tn: 'الهدف', tnLatn: 'Objectif' })} /> : null}
           </View>
           <View style={{ marginTop: space.lg }}>
             <LineChart
@@ -230,23 +257,43 @@ export default function ProgressScreen() {
               yDomain={[0, stepsTop]}
               xLabel={(x) => shortDate(addDays(steps[0].date, x))}
               yLabel={(y) => `${fmt(y / 1000)}k`}
-              emptyText={L({ en: 'Sync at least 2 days of steps to see the chart.', fr: 'Synchronise au moins 2 jours de pas pour voir la courbe.' })}
+              emptyText={L({
+                en: 'Sync at least 2 days of steps to see the chart.',
+                fr: 'Synchronise au moins 2 jours de pas pour voir la courbe.',
+                tn: 'اعمل مزامنة لخطوات 2 أيّام على الأقل باش تشوف الكورب.',
+                tnLatn: 'A3mel synchro l pas mte3 2 iyyem 3al a9al bech tchouf el courbe.',
+              })}
             />
           </View>
         </Section>
       ) : null}
 
-      <Section title={L({ en: 'Training · last 4 weeks', fr: 'Entraînement · 4 dernières semaines' })}>
+      <Section title={L({ en: 'Training · last 4 weeks', fr: 'Entraînement · 4 dernières semaines', tn: 'التمرين · آخر 4 جمعات', tnLatn: 'Sport · ekher 4 jem3at' })}>
         <TrainingBars
           weeks={weeksTrained}
           goal={trainingGoal}
           labels={weeksTrained.map((_, i) =>
-            i === 3 ? L({ en: 'This wk', fr: 'Cette sem.' }) : L({ en: '-{{n}} wk', fr: '-{{n}} sem.' }, { n: 3 - i }),
+            i === 3 ? L({
+              en: 'This wk',
+              fr: 'Cette sem.',
+              tn: 'هالجمعة',
+              tnLatn: 'Hal jem3a',
+            }) : L({
+              en: '-{{n}} wk',
+              fr: '-{{n}} sem.',
+              tn: '-{{n}} جمعة',
+              tnLatn: '-{{n}} jem3a',
+            }, { n: 3 - i }),
           )}
         />
         <Txt variant="caption" tone="secondary" style={{ marginTop: space.md }}>
           {L(
-            { en: 'Goal: {{n}} sessions per week (dashed line).', fr: 'Objectif : {{n}} séances par semaine (ligne pointillée).' },
+            {
+              en: 'Goal: {{n}} sessions per week (dashed line).',
+              fr: 'Objectif : {{n}} séances par semaine (ligne pointillée).',
+              tn: 'الهدف: {{n}} حصص في الجمعة (الخطّ المقطّع).',
+              tnLatn: 'Objectif: {{n}} séances fel jem3a (el 5att el m9atta3).',
+            },
             { n: profile?.trainingDays ?? '—' },
           )}
         </Txt>

@@ -18,7 +18,7 @@ const ROUTER = 'openrouter/free';
 /** Free entries that aren't general assistants (classifiers, music). */
 const NOT_ASSISTANTS = /safety|guard|moderation|lyria|music|embed/i;
 
-const HEADERS = { 'Content-Type': 'application/json', 'X-Title': 'NutriLens' };
+const HEADERS = { 'Content-Type': 'application/json', 'X-Title': 'Tounsi Fit' };
 
 /**
  * Set in `.env` (git-ignored) so the key doesn't have to be typed on the phone.

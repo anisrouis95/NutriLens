@@ -16,6 +16,7 @@ import Animated, {
 import { Check } from 'lucide-react-native';
 import { fonts, motion, radius, space, useTokens } from '@/theme';
 import { Tap, Txt, hapticTap } from './primitives';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // ---------------------------------------------------------------------------
 // Bottom sheet
@@ -36,6 +37,7 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   const reduce = useReducedMotion();
   const [mounted, setMounted] = useState(visible);
+  const { L } = useLanguage();
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export function Sheet({
   return (
     <Modal visible transparent statusBarTranslucent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: t.scrim }, backdrop]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel={L({ en: 'Close', fr: 'Fermer', tn: 'سكّر', tnLatn: 'Sakker' })} />
       </Animated.View>
       {/* Lifts the sheet above the keyboard when a field inside it is focused. */}
       <KeyboardAvoidingView behavior="padding" style={styles.sheetHost} pointerEvents="box-none">

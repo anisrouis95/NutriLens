@@ -12,9 +12,14 @@ export default function NotFoundScreen() {
       <Screen back largeTitle={false}>
         <EmptyState
           icon={(c) => <Compass size={32} color={c} />}
-          title={L({ en: 'This page doesn’t exist', fr: 'Cette page n’existe pas' })}
-          body={L({ en: 'The link may be old. Head back to today.', fr: 'Le lien est peut-être ancien. Reviens à aujourd’hui.' })}
-          action={<Button label={L({ en: 'Go to Today', fr: 'Aller à Aujourd’hui' })} onPress={() => router.replace('/(tabs)')} />}
+          title={L({ en: 'This page doesn’t exist', fr: 'Cette page n’existe pas', tn: 'الصفحة هاذي موش موجودة', tnLatn: 'El page hedhi mouch mawjouda' })}
+          body={L({
+            en: 'The link may be old. Head back to today.',
+            fr: 'Le lien est peut-être ancien. Reviens à aujourd’hui.',
+            tn: 'ينجّم يكون الرابط قديم. ارجع لليوم.',
+            tnLatn: 'Ynajjem ykoun el lien 9dim. Erja3 lel lyoum.',
+          })}
+          action={<Button label={L({ en: 'Go to Today', fr: 'Aller à Aujourd’hui', tn: 'روّح لليوم', tnLatn: 'Rawa7 lel lyoum' })} onPress={() => router.replace('/(tabs)')} />}
         />
       </Screen>
     </>

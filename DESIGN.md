@@ -1,5 +1,5 @@
 ---
-name: NutriLens
+name: Tounsi Fit
 description: A training-first coach for Android in Kinetic Black, the training-app standard played straight; one volt accent on a black ground.
 colors:
   ground: "#0A0A0A"
@@ -284,13 +284,13 @@ components:
     height: "48px"
 ---
 
-# Design System: NutriLens
+# Design System: Tounsi Fit
 
 ## Overview
 
 **Creative North Star: "Kinetic Black"**
 
-NutriLens is a training app first, and it looks like the best of its category: a black ground, graphite surfaces, off-white ink, and a single volt accent that means "act, progress, now". The next workout is the hero of every day; inside a session each exercise fills the screen with its demo photo fading into black, its name set in condensed Anton capitals on that fade, and logging a set is one large volt tap. Calories and macros sit one glance below the training, told in the same big Anton numerals.
+Tounsi Fit is a training app first, and it looks like the best of its category: a black ground, graphite surfaces, off-white ink, and a single volt accent that means "act, progress, now". The next workout is the hero of every day; inside a session each exercise fills the screen with its demo photo fading into black, its name set in condensed Anton capitals on that fade, and logging a set is one large volt tap. Calories and macros sit one glance below the training, told in the same big Anton numerals.
 
 The system plays the category standard straight rather than inventing a private metaphor. Density is generous where the hand is busy (64dp set rows, 56dp dock buttons, 48dp minimum targets for sweaty hands under gym light) and compact where the eye only checks (tracked 12sp labels, slim progress lines). It is dark only: black with white and volt ink holds up under gym fluorescents, in a dark room at night and in daylight glare, so there is no light scheme.
 
@@ -366,6 +366,10 @@ A near-monochrome graphite ramp carrying one electric volt, with three data inks
 
 Large numerals cap system font scaling at 1.25x and text at 1.6x so a big number never breaks its row; French labels run about 20% longer and must wrap, not clip.
 
+**The Arabic Letters Rule.** Anton and Inter have no Arabic glyphs, so `Txt` swaps any text containing Arabic letters to an Arabic face at the same size: Anton becomes Changa ExtraBold (the condensed heavy Kufi that carries the same poster weight), Inter becomes IBM Plex Sans Arabic at the matching weight. Arabic is never letter-spaced (tracking breaks the joins), gets taller lines (1.32x for Changa, 1.5x for Plex), and has no capitals. Latin-only strings in the Darija UI (exercise names, numbers) keep Anton and Inter.
+
+**The Mirror Rule.** In Darija with Arabic letters the whole layout runs right to left. Back, next and chevron icons mirror; story bars, plan bars and progress lines fill from the right; the segmented pill and the switch thumb slide the other way. Horizontal scrollers (the workout pager, the food day strip, the rulers) keep a left-to-right scroll so paging stays predictable, while each workout page lays itself out right to left.
+
 ## Layout
 
 A single-column phone layout on a 20dp screen gutter (`gutter`). Vertical rhythm uses the 4-based scale (2, 4, 8, 12, 16, 24, 32, 48dp): sections sit 32dp apart with 12dp under their Anton title, list rows have 16dp side padding, related controls sit 8dp apart.
@@ -373,6 +377,8 @@ A single-column phone layout on a 20dp screen gutter (`gutter`). Vertical rhythm
 Screens open with a 64dp top bar over a large Anton title; on scroll the large title fades and lifts out over 48dp while the bar tints from ground to Graphite Low and the small title slides in. Tab screens reserve 104dp at the bottom for the floating nav bar; the volt camera FAB floats 16dp above it at the right edge.
 
 Today reads top to bottom: the date line and two icon buttons, the full-width workout photo card, the week as story bars with its session count, then calories left in numHero with a volt line and eaten/target labels, then three macro columns.
+
+On a fasting day (Ramadan mode) Today opens with the Ramadan card above the workout card: a graphite card with a volt RAMADAN · DAY n overline and the governorate, the countdown in Anton (to iftar while fasting, to the end of suhoor at night), a 4dp volt line through the fast, and one line of guidance (when to train, what to eat at suhoor, water). In the three weeks before Ramadan the same slot holds a one-line heads-up.
 
 The workout is a horizontal pager, one exercise per page. A black band at the top carries the story bars (one tappable segment per exercise, 24dp touch strip) and the session line; the demo photo takes 90% of the screen width in height and bleeds edge to edge; the set table follows on the gutter; a fixed dock on the ground holds a 64dp slot (Up next, or the rest clock while resting) above a 56dp full-width volt button that reads LOG SET, then NEXT EXERCISE, then FINISH WORKOUT.
 
@@ -457,7 +463,7 @@ A row of slim round-ended segments 4dp apart, 4dp high in the workout band and 6
 - **Body map:** worked muscles in volt (primary) and Deep Volt (helpers) on a Graphite High body outlined in Border.
 
 ### Imagery
-Exercise photos are real start and end photographs from free-exercise-db (public domain), loaded at runtime and cached; demos alternate between the two positions. The app icon and splash rasters (assets/images/) are generated from assets/images/icon-source.mjs with embedded provenance; the icon artwork (a warm figure and bowl on #12150F) is the owner's approved asset and keeps its own colors.
+Exercise photos are real start and end photographs from free-exercise-db (public domain), loaded at runtime and cached; demos alternate between the two positions. The app icon is an original anime-style bodybuilder (lime headband and wristband, black backdrop, lime circle) generated with Google Gemini on the owner's account and chosen by the owner; scripts/build-icons.py turns assets/images/icon-art.jpg into the icon, adaptive foreground, themed silhouette, splash and Play Store rasters, each with embedded provenance.
 
 ## Do's and Don'ts
 

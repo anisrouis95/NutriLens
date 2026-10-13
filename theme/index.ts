@@ -15,4 +15,10 @@ export const fontAssets = {
   'Inter-Bold': require('@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf'),
   'Inter-ExtraBold': require('@expo-google-fonts/inter/800ExtraBold/Inter_800ExtraBold.ttf'),
   Anton: require('@expo-google-fonts/anton/400Regular/Anton_400Regular.ttf'),
+  // Arabic letters (Darija in Arabic script); see arabicFonts in tokens.
+  'Changa-ExtraBold': require('@expo-google-fonts/changa/800ExtraBold/Changa_800ExtraBold.ttf'),
+  'PlexArabic-Regular': require('@expo-google-fonts/ibm-plex-sans-arabic/400Regular/IBMPlexSansArabic_400Regular.ttf'),
+  'PlexArabic-Medium': require('@expo-google-fonts/ibm-plex-sans-arabic/500Medium/IBMPlexSansArabic_500Medium.ttf'),
+  'PlexArabic-SemiBold': require('@expo-google-fonts/ibm-plex-sans-arabic/600SemiBold/IBMPlexSansArabic_600SemiBold.ttf'),
+  'PlexArabic-Bold': require('@expo-google-fonts/ibm-plex-sans-arabic/700Bold/IBMPlexSansArabic_700Bold.ttf'),
 };

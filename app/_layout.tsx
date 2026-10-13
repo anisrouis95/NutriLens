@@ -17,6 +17,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AppDataProvider, useAppData } from '@/contexts/AppDataContext';
 import { SnackbarProvider } from '@/components/ds';
 import { fontAssets, useTokens } from '@/theme';
+import { useAutoBackup } from '@/hooks/useAutoBackup';
+import { useCloudBackup } from '@/hooks/useGoogleSync';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -49,6 +51,10 @@ function RootLayoutNav() {
   const { ready, profile } = useAppData();
   const segments = useSegments();
   const router = useRouter();
+  // Writes the backup file whenever data changes (once a folder is chosen in Settings),
+  // and uploads to the linked Google account.
+  useAutoBackup();
+  useCloudBackup();
 
   // Paint the window behind every screen in the theme's ground (no white flash).
   useEffect(() => {
@@ -102,6 +108,9 @@ function RootLayoutNav() {
           <Stack.Screen name="workout/[dayId]" options={{ gestureEnabled: false }} />
           <Stack.Screen name="learn/[id]" />
           <Stack.Screen name="coach" />
+          <Stack.Screen name="activity" />
+          <Stack.Screen name="cardio" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="ramadan" />
         </Stack>
       </SnackbarProvider>
     </NavigationThemeProvider>

@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import type {
   AppSettings,
+  CardioSession,
   FoodEntry,
   HealthDay,
   NutritionPlan,
@@ -32,16 +33,34 @@ import {
   formulaTdee,
   toDateKey,
 } from '@/lib/nutritionMath';
+import { dayNameFor, withCurrentNames } from '@/lib/workoutGenerator';
 
+/**
+ * Everything worth keeping, as one JSON document (backup files, cloud backup).
+ * Version 2 added cardio and settings; version 1 files still restore.
+ */
 export interface AppDataSnapshot {
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   profile: Profile | null;
   foods: FoodEntry[];
   weights: WeightEntry[];
   workoutPlan: WorkoutPlan | null;
   sessions: WorkoutSession[];
+  cardio?: CardioSession[];
+  settings?: Partial<AppSettings>;
 }
+
+/** Settings that describe this phone, not the user: never exported or restored. */
+const DEVICE_SETTINGS = [
+  'geminiApiKey',
+  'fileBackupDirUri',
+  'fileBackupDirName',
+  'fileBackupAt',
+  'lastBackupAt',
+  'cloudBackupEnabled',
+  'cloudSyncedUid',
+] as const;
 
 interface AppDataContextType {
   ready: boolean;
@@ -67,6 +86,10 @@ interface AppDataContextType {
   sessions: WorkoutSession[];
   saveSession: (session: WorkoutSession) => void;
   deleteSession: (id: string) => void;
+
+  cardio: CardioSession[];
+  saveCardio: (session: CardioSession) => void;
+  deleteCardio: (id: string) => void;
 
   health: Record<string, HealthDay>;
   mergeHealthDays: (days: HealthDay[]) => void;
@@ -106,13 +129,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [workoutPlan, setWorkoutPlanState] = useState<WorkoutPlan | null>(null);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [cardio, setCardio] = useState<CardioSession[]>([]);
   const [health, setHealth] = useState<Record<string, HealthDay>>({});
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [today, setToday] = useState(toDateKey());
 
   useEffect(() => {
     (async () => {
-      const [p, f, w, wp, s, h, st] = await Promise.all([
+      const [p, f, w, wp, s, h, st, c] = await Promise.all([
         loadJSON<Profile | null>(STORAGE_KEYS.profile, null),
         loadJSON<FoodEntry[]>(STORAGE_KEYS.foods, []),
         loadJSON<WeightEntry[]>(STORAGE_KEYS.weights, []),
@@ -120,12 +144,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         loadJSON<WorkoutSession[]>(STORAGE_KEYS.sessions, []),
         loadJSON<Record<string, HealthDay>>(STORAGE_KEYS.health, {}),
         loadJSON<AppSettings>(STORAGE_KEYS.settings, DEFAULT_SETTINGS),
+        loadJSON<CardioSession[]>(STORAGE_KEYS.cardio, []),
       ]);
       setProfile(p);
       setFoods(f);
       setWeights(w);
-      setWorkoutPlanState(wp);
-      setSessions(s);
+      // Plans and sessions saved before Darija existed get its names from the templates.
+      setWorkoutPlanState(wp ? withCurrentNames(wp, p) : wp);
+      setSessions(s.map((x) => (x.dayName.tn ? x : { ...x, dayName: dayNameFor(x.dayId, x.dayName) })));
+      setCardio(c);
       setHealth(h);
       setSettings({ ...DEFAULT_SETTINGS, ...st });
       setReady(true);
@@ -146,6 +173,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   usePersist(STORAGE_KEYS.weights, weights, ready);
   usePersist(STORAGE_KEYS.workoutPlan, workoutPlan, ready);
   usePersist(STORAGE_KEYS.sessions, sessions, ready);
+  usePersist(STORAGE_KEYS.cardio, cardio, ready);
   usePersist(STORAGE_KEYS.health, health, ready);
   usePersist(STORAGE_KEYS.settings, settings, ready);
 
@@ -253,6 +281,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  const saveCardio = useCallback((session: CardioSession) => {
+    setCardio((prev) =>
+      prev.some((c) => c.id === session.id) ? prev.map((c) => (c.id === session.id ? session : c)) : [...prev, session],
+    );
+  }, []);
+
+  const deleteCardio = useCallback((id: string) => {
+    setCardio((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   const mergeHealthDays = useCallback((days: HealthDay[]) => {
     setHealth((prev) => {
       const next = { ...prev };
@@ -266,16 +304,22 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const exportSnapshot = useCallback(
-    (): AppDataSnapshot => ({
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      profile,
-      foods,
-      weights,
-      workoutPlan,
-      sessions,
-    }),
-    [profile, foods, weights, workoutPlan, sessions],
+    (): AppDataSnapshot => {
+      const portable: Partial<AppSettings> = { ...settings };
+      for (const k of DEVICE_SETTINGS) delete portable[k];
+      return {
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        profile,
+        foods,
+        weights,
+        workoutPlan,
+        sessions,
+        cardio,
+        settings: portable,
+      };
+    },
+    [profile, foods, weights, workoutPlan, sessions, cardio, settings],
   );
 
   const importSnapshot = useCallback((snap: AppDataSnapshot) => {
@@ -284,6 +328,12 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setWeights(snap.weights ?? []);
     setWorkoutPlanState(snap.workoutPlan ?? null);
     setSessions(snap.sessions ?? []);
+    setCardio(snap.cardio ?? []);
+    if (snap.settings) {
+      const incoming: Partial<AppSettings> = { ...snap.settings };
+      for (const k of DEVICE_SETTINGS) delete incoming[k];
+      setSettings((prev) => ({ ...prev, ...incoming }));
+    }
   }, []);
 
   const resetAll = useCallback(async () => {
@@ -293,6 +343,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setWeights([]);
     setWorkoutPlanState(null);
     setSessions([]);
+    setCardio([]);
     setHealth({});
     setSettings(DEFAULT_SETTINGS);
   }, []);
@@ -318,6 +369,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     sessions,
     saveSession,
     deleteSession,
+    cardio,
+    saveCardio,
+    deleteCardio,
     health,
     mergeHealthDays,
     settings,

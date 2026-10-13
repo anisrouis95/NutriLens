@@ -21,7 +21,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Check, Minus, Plus } from 'lucide-react-native';
-import { fonts, motion, radius, space, typeScale, useTokens } from '@/theme';
+import { arabicFonts, fonts, hasArabic, motion, radius, space, typeScale, useTokens } from '@/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Tap, Txt, hapticTap } from './primitives';
 
 const timing = { duration: motion.base, easing: motion.easeOut };
@@ -89,11 +90,13 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   const t = useTokens();
+  const { rtl } = useLanguage();
   const [width, setWidth] = useState(0);
   const index = Math.max(0, options.findIndex((o) => o.value === value));
   // Segments share the inner width (container minus its 3px padding each side).
   const segment = Math.max(width - 6, 0) / options.length;
-  const x = useDerivedValue(() => withSpring(index * segment, motion.pressSpring), [index, segment]);
+  // Right to left, the first segment sits at the right edge and the pill slides left.
+  const x = useDerivedValue(() => withSpring(index * segment * (rtl ? -1 : 1), motion.pressSpring), [index, segment, rtl]);
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   return (
     <View
@@ -132,6 +135,8 @@ export function Segmented<T extends string>({
 
 export function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
   const t = useTokens();
+  const { rtl } = useLanguage();
+  const dir = rtl ? -1 : 1;
   const p = useDerivedValue(() => withTiming(value ? 1 : 0, timing), [value]);
   const track = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(p.value, [0, 1], [t.surfaceHigh, t.accent]),
@@ -143,7 +148,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
       width: size,
       height: size,
       borderRadius: size / 2,
-      transform: [{ translateX: 6 + p.value * 18 - (size - 16) / 2 }],
+      transform: [{ translateX: (6 + p.value * 18 - (size - 16) / 2) * dir }],
       backgroundColor: interpolateColor(p.value, [0, 1], [t.textTertiary, t.onAccent]),
     };
   });
@@ -175,9 +180,11 @@ export interface FieldProps extends TextInputProps {
   trailing?: React.ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
   numeric?: boolean;
+  /** Tighter side padding for narrow fields set three to a row. */
+  compact?: boolean;
 }
 
-export function Field({ label, unit, leading, trailing, containerStyle, numeric, style, onFocus, onBlur, ...rest }: FieldProps) {
+export function Field({ label, unit, leading, trailing, containerStyle, numeric, compact, style, onFocus, onBlur, ...rest }: FieldProps) {
   const t = useTokens();
   const [focused, setFocused] = useState(false);
   const p = useDerivedValue(() => withTiming(focused ? 1 : 0, timing), [focused]);
@@ -191,7 +198,7 @@ export function Field({ label, unit, leading, trailing, containerStyle, numeric,
           {label}
         </Txt>
       ) : null}
-      <Animated.View style={[styles.field, { backgroundColor: t.surface }, border]}>
+      <Animated.View style={[styles.field, compact && styles.fieldCompact, { backgroundColor: t.surface }, border]}>
         {leading}
         <TextInput
           placeholderTextColor={t.textTertiary}
@@ -209,6 +216,8 @@ export function Field({ label, unit, leading, trailing, containerStyle, numeric,
             numeric ? typeScale.numMedium : typeScale.body,
             styles.fieldInput,
             { color: t.text, fontFamily: numeric ? fonts.uiSemi : fonts.ui },
+            // Arabic typed or shown (Darija placeholders, Arabic food names).
+            hasArabic(rest.value || rest.placeholder) ? { fontFamily: arabicFonts[numeric ? fonts.uiSemi : fonts.ui] } : null,
             style,
           ]}
           {...rest}
@@ -404,7 +413,7 @@ const styles = StyleSheet.create({
   segmentIndicator: {
     position: 'absolute',
     top: 3,
-    left: 3,
+    start: 3,
     bottom: 3,
     borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
@@ -426,6 +435,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: space.lg,
   },
+  fieldCompact: { paddingHorizontal: space.md, gap: space.xs },
   fieldInput: { flex: 1, minWidth: 0, paddingVertical: 12 },
   tile: {
     flexDirection: 'row',

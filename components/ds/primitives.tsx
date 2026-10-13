@@ -22,7 +22,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { fonts, motion, radius, space, typeScale, TypeVariant, useTokens } from '@/theme';
+import type { LucideIcon, LucideProps } from 'lucide-react-native';
+import { arabicTextStyle, fonts, hasArabic, motion, radius, space, typeScale, TypeVariant, useTokens } from '@/theme';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 // ---------------------------------------------------------------------------
@@ -67,16 +68,35 @@ export interface TxtProps extends TextProps {
   align?: 'left' | 'center' | 'right';
 }
 
-export function Txt({ variant = 'body', tone = 'primary', color, align, style, ...rest }: TxtProps) {
+export function Txt({ variant = 'body', tone = 'primary', color, align, style, children, ...rest }: TxtProps) {
   const toneColor = useToneColor(tone);
   const isNumber = variant.startsWith('num');
+  // Arabic letters get the Arabic faces (Anton and Inter have none).
+  const arabic = hasArabic(children) ? arabicTextStyle(StyleSheet.flatten([typeScale[variant], style])) : null;
   return (
     <Text
       // Big numerals must not blow out their layout at large font scales.
       maxFontSizeMultiplier={isNumber ? 1.25 : 1.6}
-      style={[typeScale[variant], { color: color ?? toneColor, textAlign: align }, style]}
+      style={[typeScale[variant], { color: color ?? toneColor, textAlign: align }, style, arabic]}
       {...rest}
-    />
+    >
+      {children}
+    </Text>
+  );
+}
+
+const FLIP = { transform: [{ scaleX: -1 }] };
+
+/** A left/right pointing icon (back, next, chevrons), mirrored when the layout runs right to left. */
+export function DirIcon({ icon: Icon, ...props }: { icon: LucideIcon } & LucideProps) {
+  const { rtl } = useLanguage();
+  // The flip sits on a wrapper: on the SVG itself the web renderer mirrors around its corner.
+  return rtl ? (
+    <View style={FLIP}>
+      <Icon {...props} />
+    </View>
+  ) : (
+    <Icon {...props} />
   );
 }
 
@@ -360,9 +380,9 @@ export function AnimatedNumber({
   suffix?: string;
   style?: TxtProps['style'];
 }) {
-  const { language } = useLanguage();
+  const { locale } = useLanguage();
   const shown = useCountUp(value);
-  const text = shown.toLocaleString(language === 'fr' ? 'fr-FR' : 'en-US', {
+  const text = shown.toLocaleString(locale, {
     maximumFractionDigits: decimals,
     minimumFractionDigits: decimals,
   });
@@ -377,8 +397,7 @@ export function AnimatedNumber({
 
 /** Locale-aware number formatting for static text. */
 export function useFormat() {
-  const { language } = useLanguage();
-  const locale = language === 'fr' ? 'fr-FR' : 'en-US';
+  const { locale } = useLanguage();
   // Stable per locale so memoised lists (e.g. ruler ticks) don't rebuild on every render.
   return useCallback(
     (n: number, decimals = 0) =>

@@ -1,12 +1,15 @@
 // Open Food Facts — free, open database of packaged products (no API key).
 // https://openfoodfacts.github.io/openfoodfacts-server/api/
 
+import type { Language } from '@/lib/i18n';
+
 const BASE = 'https://world.openfoodfacts.org';
 const FIELDS = [
   'code',
   'product_name',
   'product_name_fr',
   'product_name_en',
+  'product_name_ar',
   'brands',
   'nutriments',
   'serving_size',
@@ -15,7 +18,7 @@ const FIELDS = [
   'countries_tags',
 ].join(',');
 // OFF asks apps to identify themselves (ignored by browsers in the web preview).
-const HEADERS = { 'User-Agent': 'NutriLens/1.0 (personal Android app)' };
+const HEADERS = { 'User-Agent': 'TounsiFit/1.1 (personal Android app)' };
 
 export interface PackagedFood {
   code: string;
@@ -33,6 +36,7 @@ interface OffProduct {
   product_name?: string;
   product_name_fr?: string;
   product_name_en?: string;
+  product_name_ar?: string;
   brands?: string;
   nutriments?: Record<string, number | string>;
   serving_size?: string;
@@ -46,7 +50,7 @@ const num = (v: unknown) => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-function toPackagedFood(p: OffProduct, language: 'en' | 'fr'): PackagedFood | null {
+function toPackagedFood(p: OffProduct, language: Language): PackagedFood | null {
   const n = p.nutriments ?? {};
   let kcal = num(n['energy-kcal_100g']);
   if (kcal === undefined) {
@@ -55,8 +59,10 @@ function toPackagedFood(p: OffProduct, language: 'en' | 'fr'): PackagedFood | nu
   }
   if (kcal === undefined) return null;
 
+  // Darija: the Arabic name when the label has one, else French (Tunisian packs carry both).
+  const own = language === 'en' ? p.product_name_en : language === 'tn' ? p.product_name_ar || p.product_name_fr : p.product_name_fr;
   const name =
-    (language === 'fr' ? p.product_name_fr : p.product_name_en) ||
+    own ||
     p.product_name ||
     p.product_name_fr ||
     p.product_name_en;
@@ -83,7 +89,7 @@ function toPackagedFood(p: OffProduct, language: 'en' | 'fr'): PackagedFood | nu
 
 export async function lookupBarcode(
   barcode: string,
-  language: 'en' | 'fr',
+  language: Language,
 ): Promise<PackagedFood | null> {
   const res = await fetch(
     `${BASE}/api/v2/product/${encodeURIComponent(barcode)}.json?fields=${FIELDS}`,
@@ -99,7 +105,7 @@ export async function lookupBarcode(
 /** Text search. OFF allows ~10 searches/minute, so call this on submit, not per keystroke. */
 export async function searchPackagedFoods(
   query: string,
-  language: 'en' | 'fr',
+  language: Language,
 ): Promise<PackagedFood[]> {
   const params = new URLSearchParams({
     search_terms: query,

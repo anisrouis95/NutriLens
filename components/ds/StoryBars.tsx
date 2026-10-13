@@ -7,6 +7,7 @@ import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useDerivedValue, useReducedMotion, withTiming } from 'react-native-reanimated';
 import { motion, space, useTokens } from '@/theme';
 import { Tap } from './primitives';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 function Segment({
   value,
@@ -30,9 +31,11 @@ function Segment({
     [clamped, reduce],
   );
   const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: p.value }] }));
+  // Fills from the reading start: the left, or the right in Darija's Arabic letters.
+  const origin = useLanguage().rtl ? 'right' : 'left';
   return (
     <View style={[styles.segment, { height, borderRadius: height / 2, backgroundColor: current ? currentTrack : track }]}>
-      <Animated.View style={[styles.fill, { backgroundColor: color, borderRadius: height / 2 }, fill]} />
+      <Animated.View style={[styles.fill, { backgroundColor: color, borderRadius: height / 2, transformOrigin: origin }, fill]} />
     </View>
   );
 }
@@ -106,5 +109,5 @@ const styles = StyleSheet.create({
   cell: { flex: 1, minWidth: 0 },
   tapCell: { height: 24, justifyContent: 'center' },
   segment: { overflow: 'hidden' },
-  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, transformOrigin: 'left' },
+  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 });

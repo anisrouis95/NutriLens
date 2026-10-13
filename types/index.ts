@@ -1,6 +1,8 @@
-// Shared domain types for NutriLens.
+// Shared domain types for Tounsi Fit.
 
-export type LocalizedText = { en: string; fr: string };
+export type { LocalizedText } from '@/lib/i18n';
+import type { LocalizedText } from '@/lib/i18n';
+import type { RamadanSettings } from '@/lib/ramadan';
 
 export type Sex = 'male' | 'female';
 export type Goal =
@@ -168,6 +170,35 @@ export interface WorkoutSession {
   sets: LoggedSet[];
 }
 
+/** Cardio machines and outdoor activities the cardio log knows. */
+export type CardioMachine = 'treadmill' | 'walk' | 'run' | 'bike' | 'elliptical' | 'rower' | 'stairs' | 'other';
+export type CardioEffort = 'easy' | 'moderate' | 'hard';
+
+/** One steady part of a cardio session (e.g. 20 min at 5.5 km/h, incline 7%). */
+export interface CardioSegment {
+  minutes: number;
+  /** km/h (treadmill, walk, run). */
+  speedKmh?: number;
+  /** Treadmill incline, %. */
+  inclinePct?: number;
+  /** Level or resistance as shown on the machine (bike, elliptical, rower, stairs). */
+  level?: number;
+  /** How hard it felt, for parts without a speed (drives the calorie estimate). */
+  effort?: CardioEffort;
+}
+
+export interface CardioSession {
+  id: string;
+  date: string;
+  machine: CardioMachine;
+  segments: CardioSegment[];
+  /** Estimates fixed at save time (body weight then), so history never shifts. */
+  kcal: number;
+  distanceKm?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface HealthDay {
   date: string;
   steps?: number;
@@ -184,6 +215,15 @@ export interface AppSettings {
   healthConnectEnabled: boolean;
   cloudBackupEnabled: boolean;
   lastBackupAt?: string;
+  /** Google account (Firebase uid) this phone's data is linked to; cloud backup runs only for it. */
+  cloudSyncedUid?: string;
   lastHealthSyncAt?: string;
   readLessons?: string[];
+  /** Folder (Android storage access URI) the automatic backup file is written to. */
+  fileBackupDirUri?: string;
+  /** Readable name of that folder, for the settings row. */
+  fileBackupDirName?: string;
+  fileBackupAt?: string;
+  /** Ramadan mode (fasting days, prayer times, lighter sessions). */
+  ramadan?: RamadanSettings;
 }

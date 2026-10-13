@@ -1,6 +1,6 @@
 // Health Connect (Android) — the on-device hub that Garmin Connect, Mi Fitness,
 // Zepp (Amazfit), Samsung Health, Fitbit and Google's own apps write into.
-// NutriLens only reads. Needs a development build (not Expo Go).
+// Tounsi Fit only reads. Needs a development build (not Expo Go).
 
 import { Platform } from 'react-native';
 import { isExpoGo } from '@/lib/runtime';

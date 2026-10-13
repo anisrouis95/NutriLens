@@ -20,6 +20,9 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, ArrowRight, ChevronRight, Dumbbell, Info, Plus, Timer, TrendingUp } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { decimalComma } from '@/lib/i18n';
+import { isFastingDay } from '@/lib/ramadan';
+import { useRamadanSettings } from '@/hooks/useRamadan';
 import { useAppData } from '@/contexts/AppDataContext';
 import {
   Button,
@@ -36,6 +39,7 @@ import {
   hapticTap,
   useFormat,
   useSnackbar,
+  DirIcon,
 } from '@/components/ds';
 import ExerciseAnimation, { ExerciseThumb } from '@/components/exercise/ExerciseAnimation';
 import { Exercise, exerciseImageUrls, exerciseName, getExercise } from '@/lib/exercises';
@@ -85,7 +89,7 @@ function NumInput({
 }) {
   const t = useTokens();
   const { language } = useLanguage();
-  const show = (v: number) => (v ? (language === 'fr' ? String(v).replace('.', ',') : String(v)) : '');
+  const show = (v: number) => (v ? (decimalComma(language) ? String(v).replace('.', ',') : String(v)) : '');
   const parse = (s: string) => (decimal ? parseFloat(s.replace(',', '.')) : parseInt(s, 10)) || 0;
   const [text, setText] = useState(() => show(value));
   const [focused, setFocused] = useState(false);
@@ -150,7 +154,7 @@ function SetRow({
   return (
     <View style={[styles.setRow, { borderBottomColor: t.hairline }]}>
       <Txt variant="overline" color={current ? t.text : t.textTertiary} style={{ width: SET_COL }}>
-        {L({ en: 'Set {{n}}', fr: 'Série {{n}}' }, { n })}
+        {L({ en: 'Set {{n}}', fr: 'Série {{n}}', tn: 'سيري {{n}}', tnLatn: 'Série {{n}}' }, { n })}
       </Txt>
       <NumInput
         value={set.weightKg}
@@ -159,25 +163,25 @@ function SetRow({
         decimal
         unit="kg"
         color={ink}
-        label={L({ en: 'Set {{n}} weight in kg', fr: 'Série {{n}}, charge en kg' }, { n })}
+        label={L({ en: 'Set {{n}} weight in kg', fr: 'Série {{n}}, charge en kg', tn: 'سيري {{n}}، الثقل بالـ kg', tnLatn: 'Série {{n}}, charge b kg' }, { n })}
       />
       <NumInput
         value={set.reps}
         onChange={onReps}
         placeholder={repsPlaceholder}
-        unit={timed ? 's' : L({ en: 'reps', fr: 'rép.' })}
+        unit={timed ? 's' : L({ en: 'reps', fr: 'rép.', tn: 'مرّات', tnLatn: 'reps' })}
         color={ink}
         label={
           timed
-            ? L({ en: 'Set {{n}} seconds', fr: 'Série {{n}}, secondes' }, { n })
-            : L({ en: 'Set {{n}} reps', fr: 'Série {{n}}, répétitions' }, { n })
+            ? L({ en: 'Set {{n}} seconds', fr: 'Série {{n}}, secondes', tn: 'سيري {{n}}، ثواني', tnLatn: 'Série {{n}}, secondes' }, { n })
+            : L({ en: 'Set {{n}} reps', fr: 'Série {{n}}, répétitions', tn: 'سيري {{n}}، مرّات', tnLatn: 'Série {{n}}, reps' }, { n })
         }
       />
       <StampCheck
         done={set.done}
         onPress={onToggle}
         size={CHECK}
-        label={L({ en: 'Set {{n}} done', fr: 'Série {{n}} faite' }, { n })}
+        label={L({ en: 'Set {{n}} done', fr: 'Série {{n}} faite', tn: 'سيري {{n}} تعملت', tnLatn: 'Série {{n}} t3malet' }, { n })}
       />
     </View>
   );
@@ -212,10 +216,10 @@ const ExercisePage = memo(function ExercisePage({
 }) {
   const t = useTokens();
   const fmt = useFormat();
-  const { L, language } = useLanguage();
+  const { L, language, rtl } = useLanguage();
   const { pe, ex, rows } = page;
   const kg = (n: number) => fmt(n, Number.isInteger(n) ? 0 : 1);
-  const unit = pe.timed ? 's' : L({ en: 'reps', fr: 'rép.' });
+  const unit = pe.timed ? 's' : L({ en: 'reps', fr: 'rép.', tn: 'مرّات', tnLatn: 'reps' });
   const min = pe.restSec / 60;
   const rest = pe.restSec >= 120 ? `${Number.isInteger(min) ? min : fmt(min, 1)}${NB}min` : `${pe.restSec}${NB}s`;
   const currentRow = rows.findIndex(({ s }) => !s.done);
@@ -224,10 +228,10 @@ const ExercisePage = memo(function ExercisePage({
   const best = [...last].sort((a, b) => b.weightKg - a.weightKg || b.reps - a.reps)[0];
   const lastText = best
     ? L(
-        { en: 'Last {{v}}', fr: 'Dernière fois {{v}}' },
+        { en: 'Last {{v}}', fr: 'Dernière fois {{v}}', tn: 'آخر مرّة {{v}}', tnLatn: 'E5er marra {{v}}' },
         { v: best.weightKg ? `${kg(best.weightKg)}${NB}kg${NB}×${NB}${best.reps}` : `${best.reps}${NB}${unit}` },
       )
-    : L({ en: 'First time', fr: 'Première fois' });
+    : L({ en: 'First time', fr: 'Première fois', tn: 'أوّل مرّة', tnLatn: 'Awwel marra' });
 
   const hintText =
     hint.kind === 'first_time'
@@ -235,19 +239,31 @@ const ExercisePage = memo(function ExercisePage({
           {
             en: 'First time: pick a weight you could lift ~{{max}} times, do {{min}} clean reps, note it.',
             fr: 'Première fois : prends une charge que tu pourrais soulever ~{{max}} fois, fais {{min}} répétitions propres, note-la.',
+            tn: 'أوّل مرّة: اختار ثقل تنجّم تهزّو ~{{max}} مرّة، اعمل {{min}} مرّات نظاف، وسجّلو.',
+            tnLatn: 'Awwel marra: e5tar charge tnajjem thezzha ~{{max}} marra, a3mel {{min}} reps ndhaf, w sajjelha.',
           },
           { min: pe.repsMin, max: pe.repsMax + 3 },
         )
       : hint.kind === 'add_weight'
         ? L(
-            { en: 'You hit the top last time — go up to {{kg}} kg today.', fr: 'Tu as atteint le haut la dernière fois — monte à {{kg}} kg aujourd’hui.' },
+            {
+              en: 'You hit the top last time — go up to {{kg}} kg today.',
+              fr: 'Tu as atteint le haut la dernière fois — monte à {{kg}} kg aujourd’hui.',
+              tn: 'المرّة اللي فاتت وصلت للفوق — طلّع لـ {{kg}} kg اليوم.',
+              tnLatn: 'L marra eli fetet wsolt lel fou9 — tala3 l {{kg}} kg lyoum.',
+            },
             { kg: kg(hint.weightKg ?? 0) },
           )
-        : L({ en: 'Beat last time by one rep on at least one set.', fr: 'Fais une répétition de plus que la dernière fois sur au moins une série.' });
+        : L({
+            en: 'Beat last time by one rep on at least one set.',
+            fr: 'Fais une répétition de plus que la dernière fois sur au moins une série.',
+            tn: 'زيد مرّة على المرّة اللي فاتت في سيري وحدة على الأقل.',
+            tnLatn: 'Zid rep wa7da 3al marra eli fetet f série wa7da 3al a9al.',
+          });
 
   return (
     <ScrollView
-      style={{ width }}
+      style={{ width, direction: rtl ? 'rtl' : 'ltr' }}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       contentContainerStyle={{ paddingBottom: bottomSpace }}
@@ -267,14 +283,14 @@ const ExercisePage = memo(function ExercisePage({
               {exerciseName(ex, language)}
             </Txt>
             <IconButton
-              label={L({ en: 'How to do it', fr: 'Comment le faire' })}
+              label={L({ en: 'How to do it', fr: 'Comment le faire', tn: 'كيفاش تعملو', tnLatn: 'Kifech ta3mlou' })}
               variant="tonal"
               onPress={() => onForm(pe.exerciseId)}
               icon={(c) => <Info size={22} color={c} />}
             />
           </View>
           <Txt variant="overline" tone="secondary" style={{ marginTop: space.xs }}>
-            {`${pe.sets}${NB}×${NB}${pe.repsMin}–${pe.repsMax}${NB}${unit} · ${L({ en: 'rest', fr: 'repos' })}${NB}${rest} · ${lastText}`}
+            {`${pe.sets}${NB}×${NB}${pe.repsMin}–${pe.repsMax}${NB}${unit} · ${L({ en: 'rest', fr: 'repos', tn: 'راحة', tnLatn: 'repos' })}${NB}${rest} · ${lastText}`}
           </Txt>
         </View>
       </View>
@@ -298,7 +314,7 @@ const ExercisePage = memo(function ExercisePage({
           ))}
         </View>
         <Button
-          label={L({ en: 'Add set', fr: 'Ajouter une série' })}
+          label={L({ en: 'Add set', fr: 'Ajouter une série', tn: 'زيد سيري', tnLatn: 'Zid série' })}
           variant="text"
           icon={(c) => <Plus size={18} color={c} strokeWidth={2.6} />}
           onPress={() => onAdd(pe.exerciseId)}
@@ -306,11 +322,16 @@ const ExercisePage = memo(function ExercisePage({
         />
 
         {showWarmup ? (
-          <Why title={L({ en: 'Warm up first (5–8 min)', fr: 'Échauffe-toi d’abord (5–8 min)' })} style={{ marginTop: space.md }}>
+          <Why
+            title={L({ en: 'Warm up first (5–8 min)', fr: 'Échauffe-toi d’abord (5–8 min)', tn: 'سخّن روحك قبل (5–8 min)', tnLatn: 'Sa55en rou7ek 9bal (5–8 min)' })}
+            style={{ marginTop: space.md }}
+          >
             <Txt tone="secondary">
               {L({
                 en: 'A few minutes of brisk walking or bike, then 1–2 light sets of this exercise at ~50% of the working weight.',
                 fr: 'Quelques minutes de marche rapide ou de vélo, puis 1 à 2 séries légères de cet exercice à ~50 % de la charge de travail.',
+                tn: 'شويّة دقايق مشي بالزربة ولا بيسكلات، ومبعد 1–2 سيريات خفاف من التمرين هذا بـ ~50% من الثقل متاع الخدمة.',
+                tnLatn: 'Chwaya d9aye9 mchi bel zerba wala vélo, w ba3d 1–2 séries 5fef mel exercice hedha b ~50% mel charge mta3 l 5edma.',
               })}
             </Txt>
           </Why>
@@ -326,6 +347,8 @@ const ExercisePage = memo(function ExercisePage({
           {L({
             en: 'Bodyweight exercise? Leave kg at 0. Stop a set if you feel sharp pain — effort burns, pain stabs.',
             fr: 'Exercice au poids du corps ? Laisse 0 kg. Arrête une série en cas de douleur vive — l’effort brûle, la douleur pique.',
+            tn: 'تمرين بوزن بدنك؟ خلّي kg على 0. وقّف السيري كان تحسّ بوجيعة قويّة — المجهود يحرقك، الوجيعة تنغزك.',
+            tnLatn: 'Exercice b poids el corps? 5alli kg 3al 0. Wa99ef série ken t7ess b wji3a 9wiya — l effort y7ar9ek, l wji3a ten8zek.',
           })}
         </Txt>
       </View>
@@ -362,13 +385,19 @@ function RestStrip({ left, fraction, onAdd, onSkip }: { left: number; fraction: 
       <View style={styles.restRow} accessibilityLiveRegion="polite">
         <Timer size={20} color={over ? t.accentText : t.textSecondary} />
         <Txt variant="overline" color={over ? t.accentText : t.textSecondary} style={{ flex: 1 }} numberOfLines={1}>
-          {over ? L({ en: 'Go! Next set', fr: 'C’est reparti !' }) : L({ en: 'Rest', fr: 'Repos' })}
+          {over
+            ? L({ en: 'Go! Next set', fr: 'C’est reparti !', tn: 'هيّا! السيري الجاية', tnLatn: 'Hayya! Série jeya' })
+            : L({ en: 'Rest', fr: 'Repos', tn: 'راحة', tnLatn: 'Repos' })}
         </Txt>
         <Txt variant="numLarge" color={over ? t.accentText : t.text} style={styles.restClock}>
           {clock}
         </Txt>
-        {action('+30 s', onAdd, L({ en: 'Add 30 seconds', fr: 'Ajouter 30 secondes' }))}
-        {action(L({ en: 'Skip', fr: 'Passer' }), onSkip, L({ en: 'Skip rest', fr: 'Passer le repos' }))}
+        {action('+30 s', onAdd, L({ en: 'Add 30 seconds', fr: 'Ajouter 30 secondes', tn: 'زيد 30 ثانية', tnLatn: 'Zid 30 secondes' }))}
+        {action(
+          L({ en: 'Skip', fr: 'Passer', tn: 'فوّت', tnLatn: 'Fawwet' }),
+          onSkip,
+          L({ en: 'Skip rest', fr: 'Passer le repos', tn: 'فوّت الراحة', tnLatn: 'Fawwet repos' }),
+        )}
       </View>
       <ProgressLine value={fraction} height={3} />
     </View>
@@ -383,10 +412,15 @@ function UpNext({ next, onPress }: { next?: Page; onPress: () => void }) {
       <View style={[styles.slot, styles.upNext, { backgroundColor: t.surface }]}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Txt variant="bodyStrong" numberOfLines={1}>
-            {L({ en: 'Last exercise', fr: 'Dernier exercice' })}
+            {L({ en: 'Last exercise', fr: 'Dernier exercice', tn: 'آخر تمرين', tnLatn: 'E5er exercice' })}
           </Txt>
           <Txt variant="caption" tone="tertiary" numberOfLines={1}>
-            {L({ en: 'Then finish and save your workout', fr: 'Ensuite, termine et enregistre ta séance' })}
+            {L({
+              en: 'Then finish and save your workout',
+              fr: 'Ensuite, termine et enregistre ta séance',
+              tn: 'ومبعد كمّل وسجّل الحصّة',
+              tnLatn: 'W ba3d kammel w sajjel séance',
+            })}
           </Txt>
         </View>
       </View>
@@ -398,7 +432,7 @@ function UpNext({ next, onPress }: { next?: Page; onPress: () => void }) {
       onPress={onPress}
       pressScale={0.98}
       haptic="selection"
-      accessibilityLabel={L({ en: 'Up next: {{name}}', fr: 'Ensuite : {{name}}' }, { name: nextName })}
+      accessibilityLabel={L({ en: 'Up next: {{name}}', fr: 'Ensuite : {{name}}', tn: 'اللي بعدو: {{name}}', tnLatn: 'Eli ba3dou: {{name}}' }, { name: nextName })}
       pressedStyle={{ backgroundColor: t.pressed }}
       style={[styles.slot, styles.upNext, { backgroundColor: t.surface }]}
     >
@@ -406,17 +440,22 @@ function UpNext({ next, onPress }: { next?: Page; onPress: () => void }) {
       <View style={{ flex: 1, minWidth: 0 }}>
         <Txt variant="bodyStrong" numberOfLines={2}>
           <Txt variant="bodyStrong" tone="tertiary">
-            {L({ en: 'Up next · ', fr: 'Ensuite · ' })}
+            {L({ en: 'Up next · ', fr: 'Ensuite · ', tn: 'اللي بعدو · ', tnLatn: 'Eli ba3dou · ' })}
           </Txt>
           {nextName}
         </Txt>
         {nextName.length <= 16 ? (
           <Txt variant="caption" tone="tertiary" numberOfLines={1}>
-            {L({ en: 'Swipe or tap when this one is done', fr: 'Glisse ou touche quand celui-ci est fini' })}
+            {L({
+              en: 'Swipe or tap when this one is done',
+              fr: 'Glisse ou touche quand celui-ci est fini',
+              tn: 'زلّق ولا اكبس كي تكمّل هذا',
+              tnLatn: 'Zalle9 wala ekbes ki tkammel hedha',
+            })}
           </Txt>
         ) : null}
       </View>
-      <ChevronRight size={20} color={t.textTertiary} />
+      <DirIcon icon={ChevronRight} size={20} color={t.textTertiary} />
     </Tap>
   );
 }
@@ -437,6 +476,9 @@ export default function WorkoutScreen() {
   const { workoutPlan, sessions, saveSession, deleteSession, today } = useAppData();
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
   const day = workoutPlan?.days.find((d) => d.id === dayId);
+  // Ramadan mode: one set fewer per exercise on a fasting day (never below 2).
+  const [ramadan] = useRamadanSettings();
+  const lighter = ramadan.lighter && isFastingDay(ramadan, today);
 
   // Last completed sets per exercise, for targets and pre-filled weights.
   const lastSets = useMemo(() => {
@@ -463,7 +505,7 @@ export default function WorkoutScreen() {
     if (unfinished) return unfinished;
     const sets: LoggedSet[] = day.exercises.flatMap((pe) => {
       const hint = progressionHint(pe, lastSets.get(pe.exerciseId) ?? []);
-      return Array.from({ length: pe.sets }, () => ({
+      return Array.from({ length: lighter ? Math.max(2, Math.min(pe.sets, pe.sets - 1)) : pe.sets }, () => ({
         exerciseId: pe.exerciseId,
         reps: pe.repsMin,
         weightKg: hint.weightKg ?? 0,
@@ -490,7 +532,9 @@ export default function WorkoutScreen() {
     const indexed = session.sets.map((s, i) => ({ s, i }));
     return day.exercises.flatMap((pe) => {
       const ex = getExercise(pe.exerciseId);
-      return ex ? [{ pe, ex, rows: indexed.filter(({ s }) => s.exerciseId === pe.exerciseId) }] : [];
+      const rows = indexed.filter(({ s }) => s.exerciseId === pe.exerciseId);
+      // The prescription shows the sets of this session when Ramadan mode trimmed them.
+      return ex ? [{ pe: rows.length < pe.sets ? { ...pe, sets: rows.length } : pe, ex, rows }] : [];
     });
   }, [day, session]);
 
@@ -549,13 +593,15 @@ export default function WorkoutScreen() {
 
   if (!day || !session || !pages.length) {
     return (
-      <Screen back title={L({ en: 'Workout', fr: 'Séance' })} largeTitle={false}>
+      <Screen back title={L({ en: 'Workout', fr: 'Séance', tn: 'حصّة', tnLatn: 'Séance' })} largeTitle={false}>
         <EmptyState
           icon={(c) => <Dumbbell size={28} color={c} />}
-          title={L({ en: 'Workout not found.', fr: 'Séance introuvable.' })}
+          title={L({ en: 'Workout not found.', fr: 'Séance introuvable.', tn: 'الحصّة مش موجودة.', tnLatn: 'Séance mech mawjouda.' })}
           body={L({
             en: 'Your program may have been rebuilt. Pick a session from the Train tab.',
             fr: 'Ton programme a peut-être été refait. Choisis une séance dans l’onglet Sport.',
+            tn: 'ممكن البرنامج متاعك تعاود. اختار حصّة من صفحة التمرين.',
+            tnLatn: 'Momken el programme mte3ek t3awed. E5tar séance mel page Sport.',
           })}
         />
       </Screen>
@@ -616,7 +662,12 @@ export default function WorkoutScreen() {
   const finish = () => {
     if (doneCount === 0) {
       deleteSession(session.id);
-      snackbar.show(L({ en: 'No sets logged — nothing saved', fr: 'Aucune série notée — rien n’a été enregistré' }));
+      snackbar.show(L({
+        en: 'No sets logged — nothing saved',
+        fr: 'Aucune série notée — rien n’a été enregistré',
+        tn: 'ما سجّلت حتى سيري — ما تسجّل شي',
+        tnLatn: 'Ma sajjelt 7atta série — ma tsajjel chay',
+      }));
       router.back();
       return;
     }
@@ -627,7 +678,16 @@ export default function WorkoutScreen() {
     const finished = { ...session, finishedAt: new Date().toISOString(), sets: session.sets };
     saveSession(finished);
     setFinishOpen(false);
-    snackbar.show(L({ en: 'Workout saved · {{n}} sets', fr: 'Séance enregistrée · {{n}} séries' }, { n: doneCount }));
+    snackbar.show(
+      L(
+        { en: 'Workout saved · {{n}} sets', fr: 'Séance enregistrée · {{n}} séries', tn: 'الحصّة تسجّلت · {{n}} سيريات', tnLatn: 'Séance tsajjlet · {{n}} séries' },
+        { n: doneCount },
+      ),
+      {
+        label: L({ en: 'Add cardio', fr: 'Ajouter du cardio', tn: 'زيد كارديو', tnLatn: 'Zid cardio' }),
+        onPress: () => router.push('/cardio'),
+      },
+    );
     router.back();
   };
 
@@ -640,21 +700,29 @@ export default function WorkoutScreen() {
   const dockAction =
     nextRowPos >= 0
       ? {
-          label: L({ en: 'Log set {{n}}', fr: 'Valider la série {{n}}' }, { n: nextRowPos + 1 }),
-          a11y: L({ en: 'Log set {{n}} of {{name}}', fr: 'Valider la série {{n}} de {{name}}' }, { n: nextRowPos + 1, name }),
+          label: L({ en: 'Log set {{n}}', fr: 'Valider la série {{n}}', tn: 'سجّل السيري {{n}}', tnLatn: 'Sajjel série {{n}}' }, { n: nextRowPos + 1 }),
+          a11y: L(
+            {
+              en: 'Log set {{n}} of {{name}}',
+              fr: 'Valider la série {{n}} de {{name}}',
+              tn: 'سجّل السيري {{n}} متاع {{name}}',
+              tnLatn: 'Sajjel série {{n}} mta3 {{name}}',
+            },
+            { n: nextRowPos + 1, name },
+          ),
           onPress: () => toggleDone(page.rows[nextRowPos].i, page.pe.restSec),
           icon: undefined,
         }
       : !isLast
         ? {
-            label: L({ en: 'Next exercise', fr: 'Exercice suivant' }),
-            a11y: L({ en: 'Next exercise', fr: 'Exercice suivant' }),
+            label: L({ en: 'Next exercise', fr: 'Exercice suivant', tn: 'التمرين اللي بعدو', tnLatn: 'Exercice eli ba3dou' }),
+            a11y: L({ en: 'Next exercise', fr: 'Exercice suivant', tn: 'التمرين اللي بعدو', tnLatn: 'Exercice eli ba3dou' }),
             onPress: () => goTo(index + 1),
-            icon: (c: string) => <ArrowRight size={20} color={c} strokeWidth={2.6} />,
+            icon: (c: string) => <DirIcon icon={ArrowRight} size={20} color={c} strokeWidth={2.6} />,
           }
         : {
-            label: L({ en: 'Finish workout', fr: 'Terminer la séance' }),
-            a11y: L({ en: 'Finish workout', fr: 'Terminer la séance' }),
+            label: L({ en: 'Finish workout', fr: 'Terminer la séance', tn: 'كمّل الحصّة', tnLatn: 'Kammel séance' }),
+            a11y: L({ en: 'Finish workout', fr: 'Terminer la séance', tn: 'كمّل الحصّة', tnLatn: 'Kammel séance' }),
             onPress: finish,
             icon: undefined,
           };
@@ -671,15 +739,18 @@ export default function WorkoutScreen() {
           current={index}
           onPress={goTo}
           labels={pages.map((p, i) =>
-            L({ en: 'Exercise {{n}}: {{name}}', fr: 'Exercice {{n}} : {{name}}' }, { n: i + 1, name: exerciseName(p.ex, language) }),
+            L(
+              { en: 'Exercise {{n}}: {{name}}', fr: 'Exercice {{n}} : {{name}}', tn: 'تمرين {{n}}: {{name}}', tnLatn: 'Exercice {{n}}: {{name}}' },
+              { n: i + 1, name: exerciseName(p.ex, language) },
+            ),
           )}
           style={styles.bars}
         />
         <View style={styles.bandRow}>
           <IconButton
-            label={L({ en: 'Back', fr: 'Retour' })}
+            label={L({ en: 'Back', fr: 'Retour', tn: 'ارجع', tnLatn: 'Erja3' })}
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            icon={(c) => <ArrowLeft size={24} color={c} />}
+            icon={(c) => <DirIcon icon={ArrowLeft} size={24} color={c} />}
           />
           <View style={{ flex: 1, minWidth: 0, alignItems: 'center' }}>
             <Txt variant="overline" align="center" numberOfLines={1}>
@@ -687,13 +758,18 @@ export default function WorkoutScreen() {
             </Txt>
             <Txt variant="overline" tone="tertiary" align="center" numberOfLines={1}>
               {L(
-                { en: '{{done}}/{{total}} sets · {{m}} min', fr: '{{done}}/{{total}} séries · {{m}} min' },
+                {
+                  en: '{{done}}/{{total}} sets · {{m}} min',
+                  fr: '{{done}}/{{total}} séries · {{m}} min',
+                  tn: '{{done}}/{{total}} سيريات · {{m}} min',
+                  tnLatn: '{{done}}/{{total}} séries · {{m}} min',
+                },
                 { done: doneCount, total, m: minutes },
               )}
             </Txt>
           </View>
           <Button
-            label={L({ en: 'Finish', fr: 'Terminer' })}
+            label={L({ en: 'Finish', fr: 'Terminer', tn: 'كمّل', tnLatn: 'Kammel' })}
             variant="outlined"
             onPress={finish}
             haptic="light"
@@ -707,6 +783,9 @@ export default function WorkoutScreen() {
         data={pages}
         horizontal
         pagingEnabled
+        // The pager always scrolls left to right (its offsets drive the page index);
+        // each page lays itself out in the reading direction.
+        style={{ direction: 'ltr' }}
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(p) => p.pe.exerciseId}
@@ -767,18 +846,22 @@ export default function WorkoutScreen() {
         </View>
       ) : null}
 
-      <Sheet visible={finishOpen} onClose={() => setFinishOpen(false)} title={L({ en: 'Finish workout?', fr: 'Terminer la séance ?' })}>
+      <Sheet
+        visible={finishOpen}
+        onClose={() => setFinishOpen(false)}
+        title={L({ en: 'Finish workout?', fr: 'Terminer la séance ?', tn: 'تكمّل الحصّة؟', tnLatn: 'Tkammel séance?' })}
+      >
         <View style={styles.stats}>
           <View style={styles.stat}>
             <Txt variant="numLarge">{`${doneCount}/${total}`}</Txt>
             <Txt variant="overline" tone="tertiary">
-              {L({ en: 'Sets', fr: 'Séries' })}
+              {L({ en: 'Sets', fr: 'Séries', tn: 'سيريات', tnLatn: 'Séries' })}
             </Txt>
           </View>
           <View style={styles.stat}>
             <Txt variant="numLarge">{fmt(Math.round(volume))}</Txt>
             <Txt variant="overline" tone="tertiary">
-              {L({ en: 'Kg lifted', fr: 'Kg soulevés' })}
+              {L({ en: 'Kg lifted', fr: 'Kg soulevés', tn: 'Kg هزّيت', tnLatn: 'Kg hazzit' })}
             </Txt>
           </View>
           <View style={styles.stat}>
@@ -796,13 +879,21 @@ export default function WorkoutScreen() {
             {L({
               en: 'Only ticked sets count in your history and next targets.',
               fr: 'Seules les séries cochées comptent dans ton historique et tes prochains objectifs.',
+              tn: 'كان السيريات اللي علّمت عليهم يتحسبو في التاريخ متاعك والأهداف الجاية.',
+              tnLatn: 'Ken les séries eli 3allamt 3lihom yet7sbou fel historique mte3ek w l objectifs el jeyin.',
             })}
           </Txt>
         ) : null}
         <View style={styles.sheetActions}>
-          <Button label={L({ en: 'Save workout', fr: 'Enregistrer la séance' })} onPress={complete} size="lg" fill haptic="light" />
           <Button
-            label={L({ en: 'Keep going', fr: 'Continuer' })}
+            label={L({ en: 'Save workout', fr: 'Enregistrer la séance', tn: 'سجّل الحصّة', tnLatn: 'Sajjel séance' })}
+            onPress={complete}
+            size="lg"
+            fill
+            haptic="light"
+          />
+          <Button
+            label={L({ en: 'Keep going', fr: 'Continuer', tn: 'واصل', tnLatn: 'Wassel' })}
             variant="outlined"
             onPress={() => setFinishOpen(false)}
             size="lg"

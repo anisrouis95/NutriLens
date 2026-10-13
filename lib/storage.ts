@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   health: '@nl/health',
   settings: '@nl/settings',
   recentFoods: '@nl/recentFoods',
+  cardio: '@nl/cardio',
 } as const;
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {

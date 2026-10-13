@@ -20,6 +20,8 @@ import { addDays, sumNutrition, weightTrend } from '@/lib/nutritionMath';
 import { getExercise } from '@/lib/exercises';
 import { loadJSON, saveJSON } from '@/lib/storage';
 import { motion, radius, space, useTokens } from '@/theme';
+import { aiLanguageName } from '@/lib/i18n';
+import { useRamadan } from '@/hooks/useRamadan';
 
 interface Message {
   role: 'user' | 'model';
@@ -36,7 +38,12 @@ export default function CoachScreen() {
   const data = useAppData();
   const { topic } = useLocalSearchParams<{ topic?: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState(topic ? L({ en: 'About “{{t}}”: ', fr: 'À propos de « {{t}} » : ' }, { t: topic }) : '');
+  const [input, setInput] = useState(topic ? L({
+    en: 'About “{{t}}”: ',
+    fr: 'À propos de « {{t}} » : ',
+    tn: 'على “{{t}}”: ',
+    tnLatn: '3la “{{t}}”: ',
+  }, { t: topic }) : '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -80,7 +87,16 @@ export default function CoachScreen() {
       .join('\n');
   }, [data]);
 
-  const system = `You are the personal nutrition and strength coach inside NutriLens, an app for a complete beginner who lives in Tunisia. They chose this app because nobody ever explained things to them properly.
+  // Ramadan mode: the coach plans meals, water and training around the fast.
+  const r = useRamadan();
+  const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const ramadanContext = r.fasting
+    ? `Fasting today${r.period ? ` (Ramadan, day ${r.period.day} of ${r.period.length})` : ' (Ramadan mode on: making up days or a voluntary fast)'} in ${r.city.name.en}: suhoor ends at Fajr ${hhmm(r.day.fajr)}, iftar at Maghrib ${hhmm(r.day.maghrib)}. Meals are logged as suhoor, iftar and evening.${r.settings.lighter ? ' Sessions have one set fewer per exercise.' : ''} Give fasting-aware advice: protein split across iftar, the evening and suhoor; water spread from iftar to suhoor; training after iftar (best) or short and moderate before it.`
+    : r.next && r.next.daysUntil <= 30 && r.settings.mode === 'auto'
+      ? `Ramadan starts in ${r.next.daysUntil} days (${r.next.start}).`
+      : '';
+
+  const system = `You are the personal nutrition and strength coach inside Tounsi Fit, an app for a complete beginner who lives in Tunisia. They chose this app because nobody ever explained things to them properly.
 
 How to answer:
 - Use their real numbers below; be specific ("eat ~${data.plan?.macros.protein ?? 150} g protein", not "eat enough protein").
@@ -90,10 +106,11 @@ How to answer:
 - Exercise advice must respect their equipment and limitations. Never prescribe through pain.
 - Safety: you are not a doctor. For medical conditions, medication, pregnancy, chest pain, injuries, or signs of disordered eating, gently recommend a professional. Never suggest eating below ~1200 kcal (women) / ~1500 kcal (men), crash diets, laxatives, or extreme fasting.
 - Formatting: short paragraphs separated by a blank line, bullet lines starting with "- ", **bold** for key numbers. No headings, tables or links.
-- Reply in the language the user writes in (default: ${language === 'fr' ? 'French' : 'English'}).
+- Reply in the language the user writes in (default: ${aiLanguageName(language)}).
 
 What you know about them right now:
-${context}`;
+${context}${ramadanContext ? `
+${ramadanContext}` : ''}`;
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();
@@ -121,8 +138,8 @@ ${context}`;
     setMessages([]);
     setError(null);
     saveJSON(HISTORY_KEY, []);
-    snackbar.show(L({ en: 'Conversation cleared', fr: 'Conversation effacée' }), {
-      label: L({ en: 'Undo', fr: 'Annuler' }),
+    snackbar.show(L({ en: 'Conversation cleared', fr: 'Conversation effacée', tn: 'المحادثة تفسخت', tnLatn: 'Discussion tfas5et' }), {
+      label: L({ en: 'Undo', fr: 'Annuler', tn: 'رجّع', tnLatn: 'Rajja3' }),
       onPress: () => {
         setMessages(previous);
         saveJSON(HISTORY_KEY, previous);
@@ -136,11 +153,31 @@ ${context}`;
   }, [messages, busy, error]);
 
   const suggestions = [
-    L({ en: 'Why this calorie target?', fr: 'Pourquoi cette cible de calories ?' }),
-    L({ en: 'What should I eat for dinner with what I have left?', fr: 'Que manger ce soir avec ce qu’il me reste ?' }),
-    L({ en: 'I didn’t lose weight this week, why?', fr: 'Je n’ai pas maigri cette semaine, pourquoi ?' }),
-    L({ en: 'How do I know which weight to lift?', fr: 'Comment choisir le poids à soulever ?' }),
-    L({ en: 'Is bread at night bad?', fr: 'Le pain le soir, c’est mauvais ?' }),
+    L({
+      en: 'Why this calorie target?',
+      fr: 'Pourquoi cette cible de calories ?',
+      tn: 'علاش حطّيتلي هالعدد متاع الكالوري؟',
+      tnLatn: '3lech 7attitli hal 3add mte3 calories?',
+    }),
+    L({
+      en: 'What should I eat for dinner with what I have left?',
+      fr: 'Que manger ce soir avec ce qu’il me reste ?',
+      tn: 'شنوّة ناكل في العشا باللي بقالي؟',
+      tnLatn: 'Chnowa nekel fel 3cha b eli b9ali?',
+    }),
+    L({
+      en: 'I didn’t lose weight this week, why?',
+      fr: 'Je n’ai pas maigri cette semaine, pourquoi ?',
+      tn: 'ما نقصتش الجمعة هاذي، علاش؟',
+      tnLatn: 'Ma n9astech el jem3a hedhi, 3lech?',
+    }),
+    L({
+      en: 'How do I know which weight to lift?',
+      fr: 'Comment choisir le poids à soulever ?',
+      tn: 'كيفاش نعرف قدّاش نهزّ من ثقل؟',
+      tnLatn: 'Kifech na3ref 9addech nhez men charge?',
+    }),
+    L({ en: 'Is bread at night bad?', fr: 'Le pain le soir, c’est mauvais ?', tn: 'الخبز في الليل يضرّ؟', tnLatn: 'El 5obz fel lil yodhor?' }),
   ];
 
   const keyProblem = error === 'no_key' || error === 'invalid_key';
@@ -150,14 +187,14 @@ ${context}`;
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.ground }} behavior="padding">
       <Screen
         back
-        title={L({ en: 'Coach', fr: 'Coach' })}
+        title={L({ en: 'Coach', fr: 'Coach', tn: 'الكوتش', tnLatn: 'Coach' })}
         largeTitle={false}
         scroll={false}
         padded={false}
         actions={
           messages.length ? (
             <IconButton
-              label={L({ en: 'Clear conversation', fr: 'Effacer la conversation' })}
+              label={L({ en: 'Clear conversation', fr: 'Effacer la conversation', tn: 'فسّخ المحادثة', tnLatn: 'Fasa5 el discussion' })}
               onPress={clearHistory}
               disabled={busy}
               icon={(c) => <Trash2 size={22} color={c} />}
@@ -170,15 +207,15 @@ ${context}`;
               containerStyle={{ flex: 1 }}
               value={input}
               onChangeText={setInput}
-              placeholder={L({ en: 'Ask your coach…', fr: 'Demande à ton coach…' })}
-              accessibilityLabel={L({ en: 'Message to your coach', fr: 'Message pour ton coach' })}
+              placeholder={L({ en: 'Ask your coach…', fr: 'Demande à ton coach…', tn: 'سقسي الكوتش متاعك…', tnLatn: 'Sa9si el coach mte3ek…' })}
+              accessibilityLabel={L({ en: 'Message to your coach', fr: 'Message pour ton coach', tn: 'ميساج للكوتش متاعك', tnLatn: 'Message lel coach mte3ek' })}
               multiline
               style={{ maxHeight: 120 }}
             />
             <View style={{ paddingBottom: 2 }}>
               <IconButton
                 variant="filled"
-                label={L({ en: 'Send', fr: 'Envoyer' })}
+                label={L({ en: 'Send', fr: 'Envoyer', tn: 'ابعث', tnLatn: 'Eb3ath' })}
                 onPress={() => send()}
                 disabled={!canSend}
                 icon={(c) => <Send size={22} color={c} />}
@@ -191,12 +228,19 @@ ${context}`;
           {!messages.length ? (
             <View>
               <Txt variant="titleSmall">
-                {L({ en: 'Ask about food, your plan or training', fr: 'Pose tes questions sur la nutrition, ton plan ou l’entraînement' })}
+                {L({
+                  en: 'Ask about food, your plan or training',
+                  fr: 'Pose tes questions sur la nutrition, ton plan ou l’entraînement',
+                  tn: 'سقسي على الماكلة، البرنامج متاعك ولّا التمرين',
+                  tnLatn: 'Sa9si 3al makla, el programme mte3ek walla el sport',
+                })}
               </Txt>
               <Txt variant="caption" tone="secondary" style={{ marginTop: space.xs }}>
                 {L({
                   en: 'The coach sees your profile, plan, today’s food and recent workouts, so the answers are about you.',
                   fr: 'Le coach voit ton profil, ton plan, tes repas du jour et tes séances : les réponses te concernent vraiment.',
+                  tn: 'الكوتش يشوف البروفيل متاعك، البرنامج، ماكلة اليوم والحصص الأخيرة، يعني الجوابات تكون عليك إنت.',
+                  tnLatn: 'El coach ychouf el profil mte3ek, el programme, makla mte3 lyoum w les séances le5ra, ya3ni les réponses ykounou 3lik enti.',
                 })}
               </Txt>
               <ChipRow style={{ marginTop: space.lg }}>
@@ -225,7 +269,7 @@ ${context}`;
           {busy ? (
             <Appear style={styles.answer}>
               <Bot size={20} color={t.textSecondary} style={{ marginTop: 2 }} />
-              <TypingDots label={L({ en: 'The coach is writing', fr: 'Le coach écrit' })} />
+              <TypingDots label={L({ en: 'The coach is writing', fr: 'Le coach écrit', tn: 'الكوتش قاعد يكتب', tnLatn: 'El coach 9a3ed yekteb' })} />
             </Appear>
           ) : null}
 
@@ -236,12 +280,32 @@ ${context}`;
               initiallyOpen
               title={
                 keyProblem
-                  ? L({ en: 'The coach needs a free AI key', fr: 'Le coach a besoin d’une clé IA gratuite' })
+                  ? L({
+                    en: 'The coach needs a free AI key',
+                    fr: 'Le coach a besoin d’une clé IA gratuite',
+                    tn: 'الكوتش يلزمو API key بلاش',
+                    tnLatn: 'El coach yelzmou API key blech',
+                  })
                   : error === 'data_policy'
-                    ? L({ en: 'OpenRouter needs one setting', fr: 'OpenRouter demande un réglage' })
+                    ? L({
+                      en: 'OpenRouter needs one setting',
+                      fr: 'OpenRouter demande un réglage',
+                      tn: 'OpenRouter يلزمو إعداد واحد',
+                      tnLatn: 'OpenRouter yelzmou réglage wa7ed',
+                    })
                     : error === 'quota'
-                    ? L({ en: 'Free AI limit reached — try again in a minute', fr: 'Limite IA gratuite atteinte — réessaie dans une minute' })
-                    : L({ en: 'Could not reach the coach', fr: 'Impossible de joindre le coach' })
+                    ? L({
+                      en: 'Free AI limit reached — try again in a minute',
+                      fr: 'Limite IA gratuite atteinte — réessaie dans une minute',
+                      tn: 'وصلت للحدّ المجّاني متاع الـ IA — عاود بعد دقيقة',
+                      tnLatn: 'Wselt lel limite gratuite mte3 l IA — 3awed ba3d d9i9a',
+                    })
+                    : L({
+                      en: 'Could not reach the coach',
+                      fr: 'Impossible de joindre le coach',
+                      tn: 'ما نجّمناش نوصلو للكوتش',
+                      tnLatn: 'Ma najjamnech nwosslou lel coach',
+                    })
               }
             >
               {keyProblem ? (
@@ -250,20 +314,34 @@ ${context}`;
                     {L({
                       en: 'It’s free and takes two minutes: create a Gemini key in Google AI Studio, or use an OpenRouter key, and paste it in your profile.',
                       fr: 'C’est gratuit et ça prend deux minutes : crée une clé Gemini dans Google AI Studio, ou utilise une clé OpenRouter, et colle-la dans ton profil.',
+                      tn: 'بلاش وياخو دقيقتين: اعمل Gemini key في Google AI Studio، ولّا استعمل OpenRouter key، وكوليها في البروفيل متاعك.',
+                      tnLatn: 'Blech w ya5ou d9i9tin: a3mel Gemini key f Google AI Studio, walla esta3mel OpenRouter key, w colliha fel profil mte3ek.',
                     })}
                   </Txt>
-                  <Button variant="tonal" label={L({ en: 'Set it up', fr: 'Configurer' })} onPress={() => router.push('/profile')} />
+                  <Button variant="tonal" label={L({
+                    en: 'Set it up',
+                    fr: 'Configurer',
+                    tn: 'حطّ الـ key',
+                    tnLatn: '7ott el key',
+                  })} onPress={() => router.push('/profile')} />
                 </>
               ) : error === 'data_policy' ? (
                 <Txt variant="caption" tone="secondary">
                   {L({
                     en: 'OpenRouter blocked its free models because of your account’s privacy settings. On openrouter.ai open Settings → Privacy and allow free endpoints (they may log prompts), then retry.',
                     fr: 'OpenRouter a bloqué ses modèles gratuits à cause des réglages de confidentialité de ton compte. Sur openrouter.ai, ouvre Settings → Privacy et autorise les endpoints gratuits (ils peuvent enregistrer les requêtes), puis réessaie.',
+                    tn: 'OpenRouter سكّر الموديلات المجّانية متاعو خاطر إعدادات الخصوصية متاع الكونت متاعك. في openrouter.ai حلّ Settings → Privacy واسمح بالـ free endpoints (ينجّمو يسجّلو الطلبات)، ومبعد عاود.',
+                    tnLatn: 'OpenRouter sakker les modèles gratuits mte3ou 5ater les paramètres de confidentialité mte3 compte mte3ek. F openrouter.ai 7ell Settings → Privacy w esma7 bel free endpoints (ynajmou ysajlou les requêtes), w ba3d 3awed.',
                   })}
                 </Txt>
               ) : (
                 <Txt variant="caption" tone="secondary">
-                  {L({ en: 'Check your internet connection and retry.', fr: 'Vérifie ta connexion internet et réessaie.' })}
+                  {L({
+                    en: 'Check your internet connection and retry.',
+                    fr: 'Vérifie ta connexion internet et réessaie.',
+                    tn: 'ثبّت في الكونيكسيون متاعك وعاود.',
+                    tnLatn: 'Thabbet fel connexion mte3ek w 3awed.',
+                  })}
                 </Txt>
               )}
             </Why>

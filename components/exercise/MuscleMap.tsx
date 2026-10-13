@@ -99,7 +99,7 @@ export default function MuscleMap({
           <Body {...common} side="front" />
           {showSides ? (
             <Txt variant="caption" tone="tertiary" style={styles.sideLabel}>
-              {L({ en: 'Front', fr: 'Devant' })}
+              {L({ en: 'Front', fr: 'Devant', tn: 'من قدّام', tnLatn: 'Mel 9oddem' })}
             </Txt>
           ) : null}
         </View>
@@ -107,7 +107,7 @@ export default function MuscleMap({
           <Body {...common} side="back" />
           {showSides ? (
             <Txt variant="caption" tone="tertiary" style={styles.sideLabel}>
-              {L({ en: 'Back', fr: 'Dos' })}
+              {L({ en: 'Back', fr: 'Dos', tn: 'من التالي', tnLatn: 'Mel tali' })}
             </Txt>
           ) : null}
         </View>
@@ -117,13 +117,13 @@ export default function MuscleMap({
           <View style={styles.legendItem}>
             <View style={[styles.swatch, { backgroundColor: c.primary }]} />
             <Txt variant="caption" tone="secondary">
-              {L({ en: 'Main muscles', fr: 'Muscles principaux' })}
+              {L({ en: 'Main muscles', fr: 'Muscles principaux', tn: 'العضلات الأساسية', tnLatn: 'Muscles principaux' })}
             </Txt>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.swatch, { backgroundColor: c.helper }]} />
             <Txt variant="caption" tone="secondary">
-              {L({ en: 'Helpers', fr: 'Muscles d’appoint' })}
+              {L({ en: 'Helpers', fr: 'Muscles d’appoint', tn: 'اللي يعاونو', tnLatn: 'Eli y3awnou' })}
             </Txt>
           </View>
         </View>

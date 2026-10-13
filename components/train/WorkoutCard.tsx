@@ -59,7 +59,7 @@ export default function WorkoutCard({
           <View style={styles.tag}>
             <Check size={14} color={t.accentText} strokeWidth={3} />
             <Txt variant="overline" tone="accent">
-              {L({ en: 'Done today · next up', fr: 'Faite aujourd’hui · ensuite' })}
+              {L({ en: 'Done today · next up', fr: 'Faite aujourd’hui · ensuite', tn: 'كمّلت اليوم · اللي بعدها', tnLatn: 'Kammelt lyoum · eli ba3dha' })}
             </Txt>
           </View>
         ) : null}
@@ -68,12 +68,12 @@ export default function WorkoutCard({
         </Txt>
         <Txt variant="label" tone="secondary">
           {L(
-            { en: '{{n}} exercises · ~{{m}} min', fr: '{{n}} exercices · ~{{m}} min' },
+            { en: '{{n}} exercises · ~{{m}} min', fr: '{{n}} exercices · ~{{m}} min', tn: '{{n}} تمارين · ~{{m}} min', tnLatn: '{{n}} exercices · ~{{m}} min' },
             { n: day.exercises.length, m: minutes },
           )}
         </Txt>
         <Button
-          label={cta ?? L({ en: 'Start workout', fr: 'Commencer la séance' })}
+          label={cta ?? L({ en: 'Start workout', fr: 'Commencer la séance', tn: 'ابدا الحصّة', tnLatn: 'Ebda séance' })}
           variant={done ? 'tonal' : 'filled'}
           icon={(c) => <Play size={18} color={c} fill={c} />}
           onPress={onStart}

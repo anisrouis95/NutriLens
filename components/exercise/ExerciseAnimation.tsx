@@ -152,8 +152,8 @@ export default function ExerciseAnimation({
     setRatio((prev) => (Math.abs(prev - r) > 0.01 ? r : prev));
   };
 
-  const startLabel = `1 · ${L({ en: 'Start', fr: 'Départ' })}`;
-  const endLabel = `2 · ${L({ en: 'End', fr: 'Arrivée' })}`;
+  const startLabel = `1 · ${L({ en: 'Start', fr: 'Départ', tn: 'البداية', tnLatn: 'Bdeya' })}`;
+  const endLabel = `2 · ${L({ en: 'End', fr: 'Arrivée', tn: 'الوصول', tnLatn: 'Wsoul' })}`;
   const frame = bleed
     ? [{ backgroundColor: p.plate, overflow: 'hidden' as const }]
     : [styles.frame, { backgroundColor: p.plate, borderColor: p.hairline }];
@@ -170,7 +170,7 @@ export default function ExerciseAnimation({
   // Reduced motion: no loop, both positions visible at once.
   if (reduce && images.length > 1) {
     return (
-      <View style={styles.pair} accessibilityLabel={L({ en: 'Start and end position', fr: 'Position de départ et d’arrivée' })}>
+      <View style={styles.pair} accessibilityLabel={L({ en: 'Start and end position', fr: 'Position de départ et d’arrivée', tn: 'وضعية البداية والوصول', tnLatn: 'Position el bdeya wel wsoul' })}>
         {[images[0], images[1]].map((uri, i) => (
           <View key={i} style={[frame, styles.pairFrame, { aspectRatio: ratio }]}>
             <Image
@@ -216,8 +216,18 @@ export default function ExerciseAnimation({
       pressScale={0.99}
       accessibilityLabel={
         playing
-          ? L({ en: 'Movement demo, playing. Tap to pause.', fr: 'Démo du mouvement en cours. Touche pour mettre en pause.' })
-          : L({ en: 'Movement demo, paused. Tap to play.', fr: 'Démo du mouvement en pause. Touche pour lancer.' })
+          ? L({
+              en: 'Movement demo, playing. Tap to pause.',
+              fr: 'Démo du mouvement en cours. Touche pour mettre en pause.',
+              tn: 'ديمو الحركة خدّام. انزل باش توقّفو.',
+              tnLatn: 'Démo el 7arka 5eddem. Enzel bech twa99fou.',
+            })
+          : L({
+              en: 'Movement demo, paused. Tap to play.',
+              fr: 'Démo du mouvement en pause. Touche pour lancer.',
+              tn: 'ديمو الحركة واقف. انزل باش تخدّمو.',
+              tnLatn: 'Démo el 7arka wa9ef. Enzel bech t5addmou.',
+            })
       }
       style={[frame, styles.single, size]}
     >

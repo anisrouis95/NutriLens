@@ -26,41 +26,83 @@ import {
   type Tone,
 } from '@/components/ds';
 import { addDays, sumNutrition } from '@/lib/nutritionMath';
+import { isFastingDay, RAMADAN_MEALS } from '@/lib/ramadan';
+import { useRamadanSettings } from '@/hooks/useRamadan';
 import { radius, space, useTokens } from '@/theme';
-import type { FoodEntry, MealType } from '@/types';
+import type { FoodEntry, LocalizedText, MealType } from '@/types';
 
-const MEALS: { id: MealType; en: string; fr: string; add: { en: string; fr: string } }[] = [
-  { id: 'breakfast', en: 'Breakfast', fr: 'Petit-déjeuner', add: { en: 'Add breakfast', fr: 'Ajouter le petit-déjeuner' } },
-  { id: 'lunch', en: 'Lunch', fr: 'Déjeuner', add: { en: 'Add lunch', fr: 'Ajouter le déjeuner' } },
-  { id: 'dinner', en: 'Dinner', fr: 'Dîner', add: { en: 'Add dinner', fr: 'Ajouter le dîner' } },
-  { id: 'snack', en: 'Snacks', fr: 'Collations', add: { en: 'Add a snack', fr: 'Ajouter une collation' } },
+const MEALS: (LocalizedText & { id: MealType; add: LocalizedText })[] = [
+  {
+    id: 'breakfast',
+    en: 'Breakfast',
+    fr: 'Petit-déjeuner',
+    tn: 'فطور الصباح',
+    tnLatn: 'Ftour sbe7',
+    add: { en: 'Add breakfast', fr: 'Ajouter le petit-déjeuner', tn: 'زيد فطور الصباح', tnLatn: 'Zid ftour sbe7' },
+  },
+  {
+    id: 'lunch',
+    en: 'Lunch',
+    fr: 'Déjeuner',
+    tn: 'الغدا',
+    tnLatn: '8de',
+    add: { en: 'Add lunch', fr: 'Ajouter le déjeuner', tn: 'زيد الغدا', tnLatn: 'Zid el 8de' },
+  },
+  {
+    id: 'dinner',
+    en: 'Dinner',
+    fr: 'Dîner',
+    tn: 'العشا',
+    tnLatn: '3cha',
+    add: { en: 'Add dinner', fr: 'Ajouter le dîner', tn: 'زيد العشا', tnLatn: 'Zid el 3cha' },
+  },
+  {
+    id: 'snack',
+    en: 'Snacks',
+    fr: 'Collations',
+    tn: 'لمجة',
+    tnLatn: 'Lemja',
+    add: { en: 'Add a snack', fr: 'Ajouter une collation', tn: 'زيد لمجة', tnLatn: 'Zid lemja' },
+  },
 ];
 
-const ONE_MEAL = { en: 'Your meal', fr: 'Ton repas', add: { en: 'Add your meal', fr: 'Ajouter ton repas' } };
+const ONE_MEAL = {
+  en: 'Your meal',
+  fr: 'Ton repas',
+  tn: 'الماكلة متاعك',
+  tnLatn: 'Makeltek',
+  add: { en: 'Add your meal', fr: 'Ajouter ton repas', tn: 'زيد الماكلة متاعك', tnLatn: 'Zid makeltek' },
+};
+
+/**
+ * The meal sections for a day. On a fasting day: suhoor, iftar, the evening
+ * (stored as breakfast, dinner, snack), with lunch only if something is in it.
+ */
+function mealsFor(fasting: boolean, entries: FoodEntry[]) {
+  if (!fasting) return MEALS;
+  const ramadan = RAMADAN_MEALS.map((m) => ({ id: m.id, ...m.name, add: m.add }));
+  return entries.some((e) => e.meal === 'lunch') ? [...ramadan, MEALS[1]] : ramadan;
+}
 
 /** Where the numbers came from, worded so a beginner can judge how exact they are. */
-const SOURCE_LABEL: Record<FoodEntry['source'], { en: string; fr: string }> = {
-  photo: { en: 'AI photo estimate', fr: 'estimé par photo' },
-  barcode: { en: 'from the label', fr: 'd’après l’étiquette' },
-  search: { en: 'food list', fr: 'liste d’aliments' },
-  manual: { en: 'entered by hand', fr: 'saisi à la main' },
-  ai_text: { en: 'AI estimate', fr: 'estimé par l’IA' },
-  quick: { en: 'quick add', fr: 'ajout rapide' },
+const SOURCE_LABEL: Record<FoodEntry['source'], LocalizedText> = {
+  photo: { en: 'AI photo estimate', fr: 'estimé par photo', tn: 'تقدير IA بالتصويرة', tnLatn: 'ta9dir IA bel photo' },
+  barcode: { en: 'from the label', fr: 'd’après l’étiquette', tn: 'من الإتيكات', tnLatn: 'mel étiquette' },
+  search: { en: 'food list', fr: 'liste d’aliments', tn: 'ليستة الماكلة', tnLatn: 'liste el makla' },
+  manual: { en: 'entered by hand', fr: 'saisi à la main', tn: 'مكتوب باليد', tnLatn: 'mektoub bel yed' },
+  ai_text: { en: 'AI estimate', fr: 'estimé par l’IA', tn: 'تقدير الـIA', tnLatn: 'ta9dir IA' },
+  quick: { en: 'quick add', fr: 'ajout rapide', tn: 'زيد بالفيسع', tnLatn: 'zid bel fisa3' },
 };
 
 /** Macro initials (French: Protéines, Glucides, Lipides). */
 const LETTER = {
-  protein: { en: 'P', fr: 'P' },
-  carbs: { en: 'C', fr: 'G' },
-  fat: { en: 'F', fr: 'L' },
+  protein: { en: 'P', fr: 'P', tn: 'ب', tnLatn: 'P' },
+  carbs: { en: 'C', fr: 'G', tn: 'ن', tnLatn: 'G' },
+  fat: { en: 'F', fr: 'L', tn: 'د', tnLatn: 'L' },
 };
 
 /** How far back the day strip can be swiped, in weeks. */
 const WEEKS_BACK = 12;
-const WEEKDAY_INITIAL = {
-  en: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
-  fr: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
-};
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -83,8 +125,9 @@ export default function FoodScreen() {
   const router = useRouter();
   const fmt = useFormat();
   const snackbar = useSnackbar();
-  const { L, language } = useLanguage();
+  const { L, language, formatDate } = useLanguage();
   const { foods, foodsForDate, today, plan, profile, addFoods, updateFood, deleteFood } = useAppData();
+  const [ramadan] = useRamadanSettings();
   const [date, setDate] = useState(today);
   const [editing, setEditing] = useState<FoodEntry | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -94,17 +137,17 @@ export default function FoodScreen() {
   const loggedDays = useMemo(() => new Set(foods.map((f) => f.date)), [foods]);
   const target = plan?.targetCalories ?? 2000;
 
-  const locale = language === 'fr' ? 'fr-FR' : 'en-US';
   const dateLabel =
     date === today
-      ? L({ en: 'Today', fr: 'Aujourd’hui' })
+      ? L({ en: 'Today', fr: 'Aujourd’hui', tn: 'اليوم', tnLatn: 'Lyoum' })
       : date === addDays(today, -1)
-        ? L({ en: 'Yesterday', fr: 'Hier' })
+        ? L({ en: 'Yesterday', fr: 'Hier', tn: 'البارح', tnLatn: 'Lbera7' })
         : capitalize(
-            new Date(date + 'T12:00:00').toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }),
+            formatDate(new Date(date + 'T12:00:00'), { weekday: 'long', day: 'numeric', month: 'long' }),
           );
 
-  const oneMeal = profile?.mealsPerDay === 1;
+  const fastingDay = isFastingDay(ramadan, date);
+  const oneMeal = profile?.mealsPerDay === 1 && !fastingDay;
   const eaten = totals.calories;
   const diff = eaten - target;
   const over = diff > 0;
@@ -129,15 +172,20 @@ export default function FoodScreen() {
       .join(' · ');
 
   const macroTargets: { key: string; label: string; tone: Tone; value: number; target?: number }[] = [
-    { key: 'p', label: L({ en: 'Protein', fr: 'Protéines' }), tone: 'protein', value: totals.protein, target: plan?.macros.protein },
-    { key: 'c', label: L({ en: 'Carbs', fr: 'Glucides' }), tone: 'carbs', value: totals.carbs, target: plan?.macros.carbs },
-    { key: 'f', label: L({ en: 'Fat', fr: 'Lipides' }), tone: 'fat', value: totals.fat, target: plan?.macros.fat },
-    { key: 'fi', label: L({ en: 'Fiber', fr: 'Fibres' }), tone: 'secondary', value: totals.fiber, target: plan?.macros.fiber },
+    { key: 'p', label: L({ en: 'Protein', fr: 'Protéines', tn: 'بروتين', tnLatn: 'Protéines' }), tone: 'protein', value: totals.protein, target: plan?.macros.protein },
+    { key: 'c', label: L({ en: 'Carbs', fr: 'Glucides', tn: 'نشويات', tnLatn: 'Glucides' }), tone: 'carbs', value: totals.carbs, target: plan?.macros.carbs },
+    { key: 'f', label: L({ en: 'Fat', fr: 'Lipides', tn: 'دهون', tnLatn: 'Lipides' }), tone: 'fat', value: totals.fat, target: plan?.macros.fat },
+    { key: 'fi', label: L({ en: 'Fiber', fr: 'Fibres', tn: 'ألياف', tnLatn: 'Fibres' }), tone: 'secondary', value: totals.fiber, target: plan?.macros.fiber },
   ];
 
   return (
     <View style={{ flex: 1 }}>
-      <Screen title={L({ en: 'Food diary', fr: 'Journal alimentaire' })} subtitle={dateLabel} bottomSpace={NAV_BAR_SPACE + 92}>
+      <Screen title={L({
+        en: 'Food diary',
+        fr: 'Journal alimentaire',
+        tn: 'جورنال الماكلة',
+        tnLatn: 'Journal el makla',
+      })} subtitle={dateLabel} bottomSpace={NAV_BAR_SPACE + 92}>
         <DayStrip today={today} selected={date} onSelect={setDate} logged={loggedDays} />
 
         {/* Day summary */}
@@ -155,7 +203,7 @@ export default function FoodScreen() {
                 {fmt(Math.abs(diff))}
               </Txt>
               <Txt variant="overline" tone={over ? 'danger' : 'secondary'}>
-                {over ? L({ en: 'over', fr: 'au-dessus' }) : L({ en: 'left', fr: 'restant' })}
+                {over ? L({ en: 'over', fr: 'au-dessus', tn: 'زايد', tnLatn: 'zeyed' }) : L({ en: 'left', fr: 'restant', tn: 'باقي', tnLatn: 'b9a' })}
               </Txt>
             </View>
           </View>
@@ -180,7 +228,7 @@ export default function FoodScreen() {
         </View>
 
         {/* Meals. Rows fade in when they mount (a new entry, or another day's list). */}
-        {MEALS.filter((meal) => !oneMeal || meal.id === 'dinner' || entries.some((e) => e.meal === meal.id)).map((m) => {
+        {mealsFor(fastingDay, entries).filter((meal) => !oneMeal || meal.id === 'dinner' || entries.some((e) => e.meal === meal.id)).map((m) => {
           // One meal a day: a single "Your meal" section instead of empty breakfast/lunch slots.
           const meal = oneMeal && m.id === 'dinner' ? { ...m, ...ONE_MEAL } : m;
           const items = entries.filter((e) => e.meal === meal.id);
@@ -197,7 +245,7 @@ export default function FoodScreen() {
                     </Txt>
                     <Button
                       variant="text"
-                      label={L({ en: 'Add', fr: 'Ajouter' })}
+                      label={L({ en: 'Add', fr: 'Ajouter', tn: 'زيد', tnLatn: 'Zid' })}
                       icon={(c) => <Plus size={20} color={c} />}
                       onPress={() => addTo(meal.id)}
                       style={{ marginRight: -space.md }}
@@ -241,7 +289,12 @@ export default function FoodScreen() {
         })}
       </Screen>
 
-      <Fab label={L({ en: 'Snap meal', fr: 'Photo du repas' })} onPress={() => router.push({ pathname: '/scan', params: { date } })} />
+      <Fab label={L({
+        en: 'Snap meal',
+        fr: 'Photo du repas',
+        tn: 'صوّر الماكلة',
+        tnLatn: 'Sawwer el makla',
+      })} onPress={() => router.push({ pathname: '/scan', params: { date } })} />
 
       <EditEntrySheet
         entry={editing}
@@ -256,8 +309,8 @@ export default function FoodScreen() {
           const { id, createdAt: _createdAt, ...rest } = editing;
           deleteFood(id);
           setSheetOpen(false);
-          snackbar.show(L({ en: 'Entry deleted', fr: 'Aliment supprimé' }), {
-            label: L({ en: 'Undo', fr: 'Annuler' }),
+          snackbar.show(L({ en: 'Entry deleted', fr: 'Aliment supprimé', tn: 'الماكلة تفسخت', tnLatn: 'El makla tfass5et' }), {
+            label: L({ en: 'Undo', fr: 'Annuler', tn: 'رجّع', tnLatn: 'Rajja3' }),
             onPress: () => addFoods([rest]),
           });
         }}
@@ -282,7 +335,7 @@ function DayStrip({
   logged: Set<string>;
 }) {
   const t = useTokens();
-  const { L, language } = useLanguage();
+  const { L, language, formatDate, weekdayName } = useLanguage();
   const [width, setWidth] = useState(0);
   const scroller = useRef<ScrollView>(null);
   const days = useMemo(
@@ -293,7 +346,6 @@ function DayStrip({
   // Each page keeps a small inset so the outer days don't touch the bezel
   // (still ≥ 49 dp per day on a 360 dp phone).
   const cell = (width - space.sm * 2) / 7;
-  const locale = language === 'fr' ? 'fr-FR' : 'en-US';
 
   // Land on the current week whenever the strip is (re)measured or the day rolls over.
   useEffect(() => {
@@ -312,6 +364,8 @@ function DayStrip({
           ref={scroller}
           horizontal
           pagingEnabled
+          // A left-to-right timeline in every language: its offsets assume it.
+          style={{ direction: 'ltr' }}
           showsHorizontalScrollIndicator={false}
           contentOffset={{ x: (WEEKS_BACK - 1) * width, y: 0 }}
           onContentSizeChange={() => scroller.current?.scrollToEnd({ animated: false })}
@@ -331,8 +385,8 @@ function DayStrip({
                     accessibilityState={{ selected: on }}
                     accessibilityLabel={
                       d === today
-                        ? L({ en: 'Today', fr: 'Aujourd’hui' })
-                        : dt.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })
+                        ? L({ en: 'Today', fr: 'Aujourd’hui', tn: 'اليوم', tnLatn: 'Lyoum' })
+                        : formatDate(dt, { weekday: 'long', day: 'numeric', month: 'long' })
                     }
                     style={{ width: cell, height: 68, paddingHorizontal: 3 }}
                   >
@@ -347,7 +401,7 @@ function DayStrip({
                       ]}
                     >
                       <Txt variant="caption" color={on ? t.onSelect : t.textTertiary}>
-                        {WEEKDAY_INITIAL[language][dt.getDay()]}
+                        {weekdayName(dt, 'narrow')}
                       </Txt>
                       <Txt variant="numMedium" color={on ? t.onSelect : d === today ? t.text : t.textSecondary}>
                         {dt.getDate()}
@@ -389,6 +443,7 @@ function EditEntrySheet({
 }) {
   const fmt = useFormat();
   const { L } = useLanguage();
+  const [ramadan] = useRamadanSettings();
   const [grams, setGrams] = useState('');
   const [kcal, setKcal] = useState('');
   const [meal, setMeal] = useState<MealType>('lunch');
@@ -427,7 +482,7 @@ function EditEntrySheet({
           {entry.grams ? (
             <>
               <Field
-                label={L({ en: 'Portion', fr: 'Portion' })}
+                label={L({ en: 'Portion', fr: 'Portion', tn: 'بورسيون', tnLatn: 'Portion' })}
                 unit="g"
                 numeric
                 value={grams}
@@ -444,7 +499,7 @@ function EditEntrySheet({
             </>
           ) : (
             <Field
-              label={L({ en: 'Calories', fr: 'Calories' })}
+              label={L({ en: 'Calories', fr: 'Calories', tn: 'كالوري', tnLatn: 'Calories' })}
               unit="kcal"
               numeric
               value={kcal}
@@ -455,10 +510,10 @@ function EditEntrySheet({
           )}
 
           <Txt variant="label" tone="secondary" style={{ marginTop: space.xl, marginBottom: space.sm }}>
-            {L({ en: 'Meal', fr: 'Repas' })}
+            {L({ en: 'Meal', fr: 'Repas', tn: 'الماكلة', tnLatn: 'Makla' })}
           </Txt>
           <ChipRow>
-            {MEALS.map((m) => (
+            {mealsFor(!!entry && isFastingDay(ramadan, entry.date), entry && entry.meal === 'lunch' ? [entry] : []).map((m) => (
               <Chip key={m.id} label={L(m)} selected={meal === m.id} onPress={() => setMeal(m.id)} />
             ))}
           </ChipRow>
@@ -466,12 +521,12 @@ function EditEntrySheet({
           <View style={styles.sheetButtons}>
             <Button
               variant="danger"
-              label={L({ en: 'Delete', fr: 'Supprimer' })}
+              label={L({ en: 'Delete', fr: 'Supprimer', tn: 'فسّخ', tnLatn: 'Fasa5' })}
               icon={(c) => <Trash2 size={20} color={c} />}
               onPress={onDelete}
               style={{ flex: 1 }}
             />
-            <Button label={L({ en: 'Save', fr: 'Enregistrer' })} onPress={save} haptic="light" style={{ flex: 1.4 }} />
+            <Button label={L({ en: 'Save', fr: 'Enregistrer', tn: 'سجّل', tnLatn: 'Sajjel' })} onPress={save} haptic="light" style={{ flex: 1.4 }} />
           </View>
         </View>
       ) : null}

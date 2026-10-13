@@ -20,6 +20,7 @@ import {
   Segmented,
   Tap,
   Txt,
+  DirIcon,
 } from '@/components/ds';
 import MuscleMap from '@/components/exercise/MuscleMap';
 import { ExerciseThumb } from '@/components/exercise/ExerciseAnimation';
@@ -45,10 +46,10 @@ const EQUIPMENT_FOR_PROFILE: Record<EquipmentProfile, string[] | undefined> = {
 };
 
 const CATEGORIES = [
-  { id: 'strength', en: 'Strength', fr: 'Muscu' },
-  { id: 'stretching', en: 'Stretching', fr: 'Étirements' },
-  { id: 'cardio', en: 'Cardio', fr: 'Cardio' },
-  { id: 'plyometrics', en: 'Jumps', fr: 'Sauts' },
+  { id: 'strength', en: 'Strength', fr: 'Muscu', tn: 'قوّة', tnLatn: 'Muscu' },
+  { id: 'stretching', en: 'Stretching', fr: 'Étirements', tn: 'تمطيط', tnLatn: 'Étirements' },
+  { id: 'cardio', en: 'Cardio', fr: 'Cardio', tn: 'كارديو', tnLatn: 'Cardio' },
+  { id: 'plyometrics', en: 'Jumps', fr: 'Sauts', tn: 'تنقيز', tnLatn: 'Tan9iz' },
 ];
 
 const THUMB = 64;
@@ -107,7 +108,7 @@ const LibraryRow = memo(function LibraryRow({
             {item.equipment ? ` · ${L(EQUIPMENT_NAMES[item.equipment])}` : ''}
           </Txt>
         </View>
-        <ChevronRight size={20} color={t.textTertiary} />
+        <DirIcon icon={ChevronRight} size={20} color={t.textTertiary} />
       </Tap>
       {!last ? <Divider inset={space.lg + THUMB + space.md} /> : null}
     </View>
@@ -178,8 +179,13 @@ export default function LibraryScreen() {
       <Field
         value={query}
         onChangeText={setQuery}
-        placeholder={L({ en: 'Search (squat, curl, développé…)', fr: 'Chercher (squat, curl, développé…)' })}
-        accessibilityLabel={L({ en: 'Search exercises', fr: 'Chercher un exercice' })}
+        placeholder={L({
+          en: 'Search (squat, curl, développé…)',
+          fr: 'Chercher (squat, curl, développé…)',
+          tn: 'لوّج (squat، curl، développé…)',
+          tnLatn: 'Lawwej (squat, curl, développé…)',
+        })}
+        accessibilityLabel={L({ en: 'Search exercises', fr: 'Chercher un exercice', tn: 'لوّج على تمرين', tnLatn: 'Lawwej 3la exercice' })}
         returnKeyType="search"
         autoCorrect={false}
         leading={<Search size={20} color={t.textTertiary} />}
@@ -187,7 +193,7 @@ export default function LibraryScreen() {
           query ? (
             <IconButton
               size={40}
-              label={L({ en: 'Clear search', fr: 'Effacer la recherche' })}
+              label={L({ en: 'Clear search', fr: 'Effacer la recherche', tn: 'فسّخ البحث', tnLatn: 'Fasa5 el ba7th' })}
               onPress={() => setQuery('')}
               icon={(c) => <X size={20} color={c} />}
             />
@@ -203,7 +209,7 @@ export default function LibraryScreen() {
       >
         <PersonStanding size={20} color={t.textSecondary} />
         <Txt variant="label" style={{ flex: 1 }}>
-          {L({ en: 'Pick a muscle on the body', fr: 'Choisis un muscle sur le corps' })}
+          {L({ en: 'Pick a muscle on the body', fr: 'Choisis un muscle sur le corps', tn: 'اختار عضلة على البدن', tnLatn: '5tar muscle 3al badan' })}
         </Txt>
         <Animated.View style={chevron}>
           <ChevronDown size={20} color={t.textTertiary} />
@@ -215,17 +221,27 @@ export default function LibraryScreen() {
           <Txt variant="caption" tone="secondary" align="center" style={{ marginTop: space.sm }}>
             {muscle
               ? L(
-                  { en: '{{m}} — tap it again to clear', fr: '{{m}} — touche-le encore pour effacer' },
+                  {
+                    en: '{{m}} — tap it again to clear',
+                    fr: '{{m}} — touche-le encore pour effacer',
+                    tn: '{{m}} — انزل عليها مرّة أخرى باش تنحّيها',
+                    tnLatn: '{{m}} — enzel 3liha marra o5ra bech tna77iha',
+                  },
                   { m: L(MUSCLE_NAMES[muscle]) },
                 )
-              : L({ en: 'Tap a muscle to see exercises for it', fr: 'Touche un muscle pour voir ses exercices' })}
+              : L({
+                en: 'Tap a muscle to see exercises for it',
+                fr: 'Touche un muscle pour voir ses exercices',
+                tn: 'انزل على عضلة باش تشوف التمارين متاعها',
+                tnLatn: 'Enzel 3la muscle bech tchouf les exercices mte3ha',
+              })}
           </Txt>
         </Appear>
       ) : null}
 
       <View style={{ marginTop: space.xl }}>
         <Segmented
-          options={CATEGORIES.map((c) => ({ value: c.id, label: L({ en: c.en, fr: c.fr }) }))}
+          options={CATEGORIES.map((c) => ({ value: c.id, label: L(c) }))}
           value={category}
           onChange={setCategory}
         />
@@ -233,32 +249,43 @@ export default function LibraryScreen() {
       <ChipRow style={{ marginTop: space.md }}>
         {profile && profile.equipment !== 'gym' ? (
           <Chip
-            label={L({ en: 'My equipment', fr: 'Mon matériel' })}
+            label={L({ en: 'My equipment', fr: 'Mon matériel', tn: 'الماتريال متاعي', tnLatn: 'Matériel mte3i' })}
             selected={myEquipment}
             onPress={() => setMyEquipment(!myEquipment)}
           />
         ) : null}
         <Chip
-          label={L({ en: 'Coach picks', fr: 'Sélection du coach' })}
+          label={L({ en: 'Coach picks', fr: 'Sélection du coach', tn: 'اختيار الكوتش', tnLatn: '5tiyar el coach' })}
           selected={curatedOnly}
           onPress={() => setCuratedOnly(!curatedOnly)}
         />
         {muscle ? (
           <ClearChip
             label={L(MUSCLE_NAMES[muscle])}
-            a11y={L({ en: 'Remove filter: {{m}}', fr: 'Retirer le filtre : {{m}}' }, { m: L(MUSCLE_NAMES[muscle]) })}
+            a11y={L({
+              en: 'Remove filter: {{m}}',
+              fr: 'Retirer le filtre : {{m}}',
+              tn: 'نحّي الفيلتر: {{m}}',
+              tnLatn: 'Na77i el filtre: {{m}}',
+            }, { m: L(MUSCLE_NAMES[muscle]) })}
             onPress={() => setMuscle(null)}
           />
         ) : null}
       </ChipRow>
       <Txt variant="numSmall" tone="tertiary" style={{ marginTop: space.lg }}>
-        {L({ en: '{{n}} exercises', fr: '{{n}} exercices' }, { n: count })}
+        {L({ en: '{{n}} exercises', fr: '{{n}} exercices', tn: '{{n}} تمارين', tnLatn: '{{n}} exercices' }, { n: count })}
       </Txt>
     </View>
   );
 
   return (
-    <Screen back title={L({ en: 'Exercise library', fr: 'Bibliothèque d’exercices' })} largeTitle={false} scroll={false} padded={false}>
+    <Screen
+      back
+      title={L({ en: 'Exercise library', fr: 'Bibliothèque d’exercices', tn: 'مكتبة التمارين', tnLatn: 'Bibliothèque des exercices' })}
+      largeTitle={false}
+      scroll={false}
+      padded={false}
+    >
       <FlatList
         data={results}
         keyExtractor={(e) => e.id}
@@ -275,12 +302,25 @@ export default function LibraryScreen() {
         ListEmptyComponent={
           <EmptyState
             icon={(c) => <SearchX size={28} color={c} />}
-            title={L({ en: 'No exercise matches these filters.', fr: 'Aucun exercice ne correspond à ces filtres.' })}
+            title={L({
+              en: 'No exercise matches these filters.',
+              fr: 'Aucun exercice ne correspond à ces filtres.',
+              tn: 'حتى تمرين ما يمشي مع الفيلترات هاذم.',
+              tnLatn: '7atta exercice ma yemchi m3a les filtres hedhom.',
+            })}
             body={L({
               en: 'Try another word or muscle, or clear the filters.',
               fr: 'Essaie un autre mot ou un autre muscle, ou retire les filtres.',
+              tn: 'جرّب كلمة ولا عضلة أخرى، ولا نحّي الفيلترات.',
+              tnLatn: 'Jarreb kelma walla muscle o5ra, walla na77i les filtres.',
             })}
-            action={<Button label={L({ en: 'Clear filters', fr: 'Retirer les filtres' })} variant="tonal" onPress={clearFilters} />}
+            action={
+              <Button
+                label={L({ en: 'Clear filters', fr: 'Retirer les filtres', tn: 'نحّي الفيلترات', tnLatn: 'Na77i les filtres' })}
+                variant="tonal"
+                onPress={clearFilters}
+              />
+            }
           />
         }
       />

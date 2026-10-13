@@ -1,4 +1,4 @@
-// NutriLens design tokens — "Kinetic Black".
+// Tounsi Fit design tokens — "Kinetic Black".
 // The training-app standard played straight: a black ground, graphite
 // surfaces, off-white ink, one volt accent for every action, progress and
 // the current set, and inverted white pills for selection. Three data inks
@@ -90,6 +90,45 @@ export const fonts = {
   uiHeavy: 'Inter-ExtraBold',
   display: 'Anton',
 } as const;
+
+/**
+ * Arabic-script faces, swapped in by Txt for any text with Arabic letters
+ * (Darija in Arabic letters, or Arabic food names). Anton and Inter have no
+ * Arabic glyphs. Changa ExtraBold is the condensed, heavy Kufi that stands in
+ * for Anton; IBM Plex Sans Arabic is the plain reading face that stands in for
+ * Inter. Arabic is never letter-spaced (it breaks the joins) and needs taller
+ * lines than Latin.
+ */
+export const arabicFonts: Record<string, string> = {
+  [fonts.display]: 'Changa-ExtraBold',
+  [fonts.uiHeavy]: 'PlexArabic-Bold',
+  [fonts.uiBold]: 'PlexArabic-Bold',
+  [fonts.uiSemi]: 'PlexArabic-SemiBold',
+  [fonts.uiMedium]: 'PlexArabic-Medium',
+  [fonts.ui]: 'PlexArabic-Regular',
+};
+
+const ARABIC_LETTERS = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+
+/** True when a string (or any string among text children) holds Arabic letters. */
+export function hasArabic(node: unknown): boolean {
+  if (typeof node === 'string') return ARABIC_LETTERS.test(node);
+  if (Array.isArray(node)) return node.some(hasArabic);
+  return false;
+}
+
+/** The Arabic-script version of a resolved text style (same size, Arabic face, taller line). */
+export function arabicTextStyle(style: { fontFamily?: string; fontSize?: number; lineHeight?: number }) {
+  const family = style.fontFamily ? arabicFonts[style.fontFamily] : undefined;
+  if (!family) return null;
+  const size = style.fontSize ?? 16;
+  const display = family === 'Changa-ExtraBold';
+  return {
+    fontFamily: family,
+    letterSpacing: 0,
+    lineHeight: Math.max(style.lineHeight ?? 0, Math.round(size * (display ? 1.32 : 1.5))),
+  };
+}
 
 const tabular = ['tabular-nums'] as ('tabular-nums')[];
 

@@ -50,10 +50,10 @@ export default function PendingList({ items, onChange, onSave, saveLabel, tips }
 
   const confidence = (c: NonNullable<PendingFood['confidence']>) =>
     c === 'high'
-      ? { color: t.success, label: L({ en: 'confident', fr: 'fiable' }) }
+      ? { color: t.success, label: L({ en: 'confident', fr: 'fiable', tn: 'مضمون', tnLatn: 'madhmoun' }) }
       : c === 'low'
-        ? { color: t.danger, label: L({ en: 'unsure — check', fr: 'incertain — vérifie' }) }
-        : { color: t.accent, label: L({ en: 'estimate', fr: 'estimation' }) };
+        ? { color: t.danger, label: L({ en: 'unsure — check', fr: 'incertain — vérifie', tn: 'موش أكيد — ثبّت', tnLatn: 'mouch akid — thabbet' }) }
+        : { color: t.accent, label: L({ en: 'estimate', fr: 'estimation', tn: 'تقريبي', tnLatn: 'ta9ribi' }) };
 
   if (!items.length) return null;
 
@@ -82,7 +82,7 @@ export default function PendingList({ items, onChange, onSave, saveLabel, tips }
                   </View>
                   <View style={styles.remove}>
                     <IconButton
-                      label={L({ en: 'Remove {{name}}', fr: 'Retirer {{name}}' }, { name: item.name })}
+                      label={L({ en: 'Remove {{name}}', fr: 'Retirer {{name}}', tn: 'نحّي {{name}}', tnLatn: 'Na77i {{name}}' }, { name: item.name })}
                       icon={() => <Trash2 size={20} color={t.textSecondary} />}
                       onPress={() => remove(item.key)}
                     />
@@ -100,7 +100,7 @@ export default function PendingList({ items, onChange, onSave, saveLabel, tips }
                     <IconButton
                       variant="tonal"
                       size={44}
-                      label={L({ en: '{{n}} g less', fr: '{{n}} g de moins' }, { n: step })}
+                      label={L({ en: '{{n}} g less', fr: '{{n}} g de moins', tn: 'نقّص {{n}} g', tnLatn: 'Na99es {{n}} g' }, { n: step })}
                       icon={(c) => <Minus size={20} color={c} />}
                       onPress={() => update(item.key, { grams: Math.max(step, item.grams - step) })}
                     />
@@ -115,13 +115,18 @@ export default function PendingList({ items, onChange, onSave, saveLabel, tips }
                       }}
                       keyboardType="decimal-pad"
                       selectTextOnFocus
-                      accessibilityLabel={L({ en: 'Grams of {{name}}', fr: 'Grammes de {{name}}' }, { name: item.name })}
+                      accessibilityLabel={L({
+                        en: 'Grams of {{name}}',
+                        fr: 'Grammes de {{name}}',
+                        tn: 'الغرامات متاع {{name}}',
+                        tnLatn: 'Grammes mte3 {{name}}',
+                      }, { name: item.name })}
                       style={{ textAlign: 'center' }}
                     />
                     <IconButton
                       variant="tonal"
                       size={44}
-                      label={L({ en: '{{n}} g more', fr: '{{n}} g de plus' }, { n: step })}
+                      label={L({ en: '{{n}} g more', fr: '{{n}} g de plus', tn: 'زيد {{n}} g', tnLatn: 'Zid {{n}} g' }, { n: step })}
                       icon={(c) => <Plus size={20} color={c} />}
                       onPress={() => update(item.key, { grams: item.grams + step })}
                     />
@@ -166,7 +171,7 @@ export default function PendingList({ items, onChange, onSave, saveLabel, tips }
       <View style={styles.totals}>
         <View style={styles.totalRow}>
           <Txt variant="titleSmall" style={{ flex: 1 }}>
-            {L({ en: 'Total', fr: 'Total' })}
+            {L({ en: 'Total', fr: 'Total', tn: 'المجموع', tnLatn: 'Total' })}
           </Txt>
           <AnimatedNumber value={Math.round(totals.calories)} variant="numLarge" suffix="kcal" />
         </View>
@@ -192,9 +197,9 @@ function MacroLine({ protein, carbs, fat, full }: { protein: number; carbs: numb
   // One decimal only where it matters (a few grams), whole grams otherwise.
   const grams = (n: number) => fmt(n, n > 0 && n < 10 && !Number.isInteger(n) ? 1 : 0);
   const parts: { tone: Tone; label: string; value: number }[] = [
-    { tone: 'protein', label: full ? L({ en: 'Protein', fr: 'Protéines' }) : L({ en: 'P', fr: 'P' }), value: protein },
-    { tone: 'carbs', label: full ? L({ en: 'Carbs', fr: 'Glucides' }) : L({ en: 'C', fr: 'G' }), value: carbs },
-    { tone: 'fat', label: full ? L({ en: 'Fat', fr: 'Lipides' }) : L({ en: 'F', fr: 'L' }), value: fat },
+    { tone: 'protein', label: full ? L({ en: 'Protein', fr: 'Protéines', tn: 'بروتين', tnLatn: 'Protéines' }) : L({ en: 'P', fr: 'P', tn: 'ب', tnLatn: 'P' }), value: protein },
+    { tone: 'carbs', label: full ? L({ en: 'Carbs', fr: 'Glucides', tn: 'نشويات', tnLatn: 'Glucides' }) : L({ en: 'C', fr: 'G', tn: 'ن', tnLatn: 'G' }), value: carbs },
+    { tone: 'fat', label: full ? L({ en: 'Fat', fr: 'Lipides', tn: 'دهون', tnLatn: 'Lipides' }) : L({ en: 'F', fr: 'L', tn: 'د', tnLatn: 'L' }), value: fat },
   ];
   return (
     <Txt variant="numSmall" tone="secondary">

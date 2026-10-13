@@ -9,11 +9,12 @@ import LessonIcon from '@/components/learn/LessonIcon';
 import { lessonOrder, lessons, type Lesson } from '@/content/lessons';
 import { planParams } from '@/lib/planParams';
 import { radius, space, useTokens } from '@/theme';
+import { interpolate } from '@/contexts/LanguageContext';
 
 export default function LessonScreen() {
   const t = useTokens();
   const router = useRouter();
-  const { L, language } = useLanguage();
+  const { L, language, pick } = useLanguage();
   const { plan, profile, settings, updateSettings } = useAppData();
   const { id } = useLocalSearchParams<{ id: string }>();
   const lesson = lessons.find((l) => l.id === id);
@@ -29,13 +30,15 @@ export default function LessonScreen() {
 
   if (!lesson) {
     return (
-      <Screen back title={L({ en: 'Lesson', fr: 'Leçon' })} largeTitle={false}>
+      <Screen back title={L({ en: 'Lesson', fr: 'Leçon', tn: 'درس', tnLatn: 'Dars' })} largeTitle={false}>
         <EmptyState
           icon={(c) => <BookOpen size={24} color={c} />}
-          title={L({ en: 'Lesson not found', fr: 'Leçon introuvable' })}
+          title={L({ en: 'Lesson not found', fr: 'Leçon introuvable', tn: 'الدرس موش موجود', tnLatn: 'E dars mouch mawjoud' })}
           body={L({
             en: 'It may have been renamed in an update. Go back to the lessons list.',
             fr: 'Elle a peut-être été renommée lors d’une mise à jour. Reviens à la liste des leçons.',
+            tn: 'ينجّم يكون تبدّل اسمو مع تحديث. ارجع لليستة الدروس.',
+            tnLatn: 'Ynajjem ykoun tbaddel esmou m3a mise à jour. Erja3 l liste mta3 e dourous.',
           })}
         />
       </Screen>
@@ -58,7 +61,7 @@ export default function LessonScreen() {
             <Txt variant="numSmall" tone="tertiary">
               {lesson.minutes}
             </Txt>
-            {L({ en: ' min read', fr: ' min de lecture' })}
+            {L({ en: ' min read', fr: ' min de lecture', tn: ' min قراية', tnLatn: ' min lecture' })}
           </Txt>
         </View>
         <Txt variant="body" tone="secondary" style={{ marginTop: space.md }}>
@@ -70,6 +73,8 @@ export default function LessonScreen() {
             {L({
               en: 'Numbers below are examples — answer the questionnaire to see yours.',
               fr: 'Les chiffres ci-dessous sont des exemples — réponds au questionnaire pour voir les tiens.',
+              tn: 'الأرقام اللي لوطة أمثلة — جاوب على الأسئلة باش تشوف متاعك.',
+              tnLatn: 'El ar9am eli louta exemples — jaweb 3al questionnaire bech tchouf mte3ek.',
             })}
           </Txt>
         ) : null}
@@ -85,15 +90,25 @@ export default function LessonScreen() {
 
         <View style={[styles.takeaways, { backgroundColor: t.surfaceLow }]}>
           <Txt variant="titleSmall" accessibilityRole="header" style={{ marginBottom: space.md }}>
-            {L({ en: 'Key takeaways', fr: 'À retenir' })}
+            {L({ en: 'Key takeaways', fr: 'À retenir', tn: 'الخلاصة', tnLatn: 'El 5olsa' })}
           </Txt>
-          <RichText text={lesson.keyTakeaways[language].map((k) => `- ${L({ en: k, fr: k }, params)}`).join('\n')} />
+          <RichText text={pick(lesson.keyTakeaways).map((k) => `- ${interpolate(k, params)}`).join('\n')} />
         </View>
 
         <Group style={{ marginTop: space.xxl }}>
           <ListItem
-            title={L({ en: 'Still unclear? Ask the coach', fr: 'Pas clair ? Demande au coach' })}
-            supporting={L({ en: 'Answers built from your own numbers', fr: 'Des réponses construites avec tes chiffres' })}
+            title={L({
+              en: 'Still unclear? Ask the coach',
+              fr: 'Pas clair ? Demande au coach',
+              tn: 'مازال موش واضح؟ سقسي الكوتش',
+              tnLatn: 'Mazel mouch wadh7? Sa9si el coach',
+            })}
+            supporting={L({
+              en: 'Answers built from your own numbers',
+              fr: 'Des réponses construites avec tes chiffres',
+              tn: 'أجوبة مبنية على الأرقام متاعك',
+              tnLatn: 'Ajwba mabniya 3al ar9am mte3ek',
+            })}
             leading={(c) => <Bot size={22} color={c} />}
             onPress={() => router.push({ pathname: '/coach', params: { topic: L(lesson.title) } })}
             chevron
@@ -101,12 +116,17 @@ export default function LessonScreen() {
         </Group>
 
         {next || related.length ? (
-          <Section title={L({ en: 'Keep reading', fr: 'Continuer la lecture' })}>
+          <Section title={L({ en: 'Keep reading', fr: 'Continuer la lecture', tn: 'كمّل اقرا', tnLatn: 'Kammel e9ra' })}>
             <Group>
               {next ? (
                 <ListItem
                   title={L(next.title)}
-                  supporting={L({ en: 'Next lesson · {{m}} min', fr: 'Leçon suivante · {{m}} min' }, { m: next.minutes })}
+                  supporting={L({
+                    en: 'Next lesson · {{m}} min',
+                    fr: 'Leçon suivante · {{m}} min',
+                    tn: 'الدرس اللي بعدو · {{m}} min',
+                    tnLatn: 'Dars eli ba3dou · {{m}} min',
+                  }, { m: next.minutes })}
                   leading={(c) => <LessonIcon name={next.icon} color={c} />}
                   onPress={() => open(next.id)}
                   chevron
@@ -117,7 +137,12 @@ export default function LessonScreen() {
                 <ListItem
                   key={r.id}
                   title={L(r.title)}
-                  supporting={L({ en: 'Related · {{m}} min', fr: 'À lire aussi · {{m}} min' }, { m: r.minutes })}
+                  supporting={L({
+                    en: 'Related · {{m}} min',
+                    fr: 'À lire aussi · {{m}} min',
+                    tn: 'اقرا زادة · {{m}} min',
+                    tnLatn: 'E9ra zeda · {{m}} min',
+                  }, { m: r.minutes })}
                   leading={(c) => <LessonIcon name={r.icon} color={c} />}
                   onPress={() => open(r.id)}
                   chevron

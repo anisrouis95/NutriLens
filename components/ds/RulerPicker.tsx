@@ -139,6 +139,8 @@ export default function RulerPicker({ value, onChange, min, max, step, unit, lab
           <ScrollView
             ref={scroller}
             horizontal
+            // Numbers grow to the right in every language; the value math reads x from the left.
+            style={{ direction: 'ltr' }}
             showsHorizontalScrollIndicator={false}
             snapToInterval={TICK}
             decelerationRate="fast"

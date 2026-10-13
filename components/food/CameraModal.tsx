@@ -63,27 +63,35 @@ export default function CameraModal({ visible, mode, onClose, onPhoto, onBarcode
         >
           <Camera size={24} color={t.textSecondary} />
           <Txt variant="title" align="center" style={{ marginTop: space.md }}>
-            {L({ en: 'Camera access', fr: 'Accès à la caméra' })}
+            {L({ en: 'Camera access', fr: 'Accès à la caméra', tn: 'إذن الكاميرا', tnLatn: 'Accès lel caméra' })}
           </Txt>
           <Txt variant="body" tone="secondary" align="center" style={{ marginTop: space.sm, marginBottom: space.xl }}>
             {blocked
               ? L({
-                  en: 'Camera access is turned off for NutriLens. Turn it on in the system settings to photograph meals and scan barcodes.',
-                  fr: 'L’accès à la caméra est désactivé pour NutriLens. Active-le dans les réglages du téléphone pour photographier les repas et scanner les codes-barres.',
+                  en: 'Camera access is turned off for Tounsi Fit. Turn it on in the system settings to photograph meals and scan barcodes.',
+                  fr: 'L’accès à la caméra est désactivé pour Tounsi Fit. Active-le dans les réglages du téléphone pour photographier les repas et scanner les codes-barres.',
+                  tn: 'الكاميرا مسكّرة على Tounsi Fit. حلّها من إعدادات التليفون باش تصوّر الماكلة وتسكاني الكود بار.',
+                  tnLatn: 'El caméra msakra 3la Tounsi Fit. 7ellha mel paramètres mte3 tel bech tsawwer el makla w tscanni les codes-barres.',
                 })
               : L({
-                  en: 'NutriLens needs the camera to photograph meals and scan barcodes.',
-                  fr: 'NutriLens a besoin de l’appareil photo pour photographier les repas et scanner les codes-barres.',
+                  en: 'Tounsi Fit needs the camera to photograph meals and scan barcodes.',
+                  fr: 'Tounsi Fit a besoin de l’appareil photo pour photographier les repas et scanner les codes-barres.',
+                  tn: 'Tounsi Fit يستحقّ الكاميرا باش تصوّر الماكلة وتسكاني الكود بار.',
+                  tnLatn: 'Tounsi Fit yest7a99 el caméra bech tsawwer el makla w tscanni les codes-barres.',
                 })}
           </Txt>
           <Button
-            label={blocked ? L({ en: 'Open settings', fr: 'Ouvrir les réglages' }) : L({ en: 'Allow camera', fr: 'Autoriser la caméra' })}
+            label={
+              blocked
+                ? L({ en: 'Open settings', fr: 'Ouvrir les réglages', tn: 'حلّ الإعدادات', tnLatn: '7ell el paramètres' })
+                : L({ en: 'Allow camera', fr: 'Autoriser la caméra', tn: 'اسمح بالكاميرا', tnLatn: 'Esma7 bel caméra' })
+            }
             onPress={blocked ? () => Linking.openSettings() : requestPermission}
             size="lg"
             fill
           />
           <Button
-            label={L({ en: 'Cancel', fr: 'Annuler' })}
+            label={L({ en: 'Cancel', fr: 'Annuler', tn: 'بطّل', tnLatn: 'Batel' })}
             variant="outlined"
             onPress={onClose}
             size="lg"
@@ -115,16 +123,18 @@ export default function CameraModal({ visible, mode, onClose, onPhoto, onBarcode
             style={[StyleSheet.absoluteFill, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.xl }]}
           >
             <View style={styles.topBar} pointerEvents="box-none">
-              <ScrimButton label={L({ en: 'Close camera', fr: 'Fermer la caméra' })} onPress={onClose}>
+              <ScrimButton label={L({ en: 'Close camera', fr: 'Fermer la caméra', tn: 'سكّر الكاميرا', tnLatn: 'Sakker el caméra' })} onPress={onClose}>
                 <X size={24} color={night.text} />
               </ScrimButton>
               <View style={[styles.hint, { backgroundColor: night.scrim }]}>
                 <Txt variant="label" color={night.text}>
                   {mode === 'barcode'
-                    ? L({ en: 'Point at the barcode', fr: 'Vise le code-barres' })
+                    ? L({ en: 'Point at the barcode', fr: 'Vise le code-barres', tn: 'حطّ الكاميرا على الكود بار', tnLatn: '7ott el caméra 3al code-barres' })
                     : L({
                         en: 'Whole plate in frame, from above, good light',
                         fr: 'Toute l’assiette, vue de dessus, bonne lumière',
+                        tn: 'الصحن الكل، من الفوق، ضوء باهي',
+                        tnLatn: 'Essa7n lkol, mel fou9, dhaw behi',
                       })}
                 </Txt>
               </View>
@@ -144,7 +154,7 @@ export default function CameraModal({ visible, mode, onClose, onPhoto, onBarcode
             {mode === 'photo' ? (
               <View style={styles.bottomBar}>
                 <ScrimButton
-                  label={L({ en: 'Switch camera', fr: 'Changer de caméra' })}
+                  label={L({ en: 'Switch camera', fr: 'Changer de caméra', tn: 'بدّل الكاميرا', tnLatn: 'Baddel el caméra' })}
                   onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
                 >
                   <RefreshCcw size={22} color={night.text} />
@@ -154,7 +164,7 @@ export default function CameraModal({ visible, mode, onClose, onPhoto, onBarcode
                   disabled={taking}
                   haptic="medium"
                   pressScale={0.92}
-                  accessibilityLabel={L({ en: 'Take photo', fr: 'Prendre la photo' })}
+                  accessibilityLabel={L({ en: 'Take photo', fr: 'Prendre la photo', tn: 'صوّر', tnLatn: 'Sawwer' })}
                   style={[styles.capture, { borderColor: night.text }]}
                 >
                   <View style={[styles.captureInner, { backgroundColor: night.text }]} />

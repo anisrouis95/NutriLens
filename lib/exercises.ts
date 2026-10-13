@@ -5,6 +5,7 @@ import type { Slug } from 'react-native-body-highlighter';
 import type { LocalizedText } from '@/types';
 import exercisesData from '@/data/exercises.json';
 import { exerciseExtras } from '@/data/exerciseCuration';
+import type { Language } from '@/lib/i18n';
 
 export type Muscle =
   | 'abdominals'
@@ -53,8 +54,9 @@ export function exerciseImageUrls(exercise: Exercise): string[] {
   return exercise.images.map((path) => IMAGE_BASE + path);
 }
 
-export function exerciseName(exercise: Exercise, language: 'en' | 'fr'): string {
-  if (language === 'fr') return exerciseExtras[exercise.id]?.nameFr ?? exercise.name;
+/** Exercise name: French for French and both Darija variants (the names Tunisian gyms use). */
+export function exerciseName(exercise: Exercise, language: Language): string {
+  if (language !== 'en') return exerciseExtras[exercise.id]?.nameFr ?? exercise.name;
   return exercise.name;
 }
 
@@ -100,23 +102,23 @@ export const SLUG_TO_MUSCLES: Partial<Record<Slug, Muscle[]>> = {
 };
 
 export const MUSCLE_NAMES: Record<Muscle, LocalizedText> = {
-  abdominals: { en: 'Abs', fr: 'Abdominaux' },
-  hamstrings: { en: 'Hamstrings', fr: 'Ischio-jambiers' },
-  calves: { en: 'Calves', fr: 'Mollets' },
-  shoulders: { en: 'Shoulders', fr: 'Épaules' },
-  adductors: { en: 'Inner thighs', fr: 'Adducteurs' },
-  glutes: { en: 'Glutes', fr: 'Fessiers' },
-  quadriceps: { en: 'Quads (front thighs)', fr: 'Quadriceps' },
-  biceps: { en: 'Biceps', fr: 'Biceps' },
-  forearms: { en: 'Forearms', fr: 'Avant-bras' },
-  abductors: { en: 'Outer hips', fr: 'Abducteurs' },
-  triceps: { en: 'Triceps', fr: 'Triceps' },
-  chest: { en: 'Chest', fr: 'Pectoraux' },
-  'lower back': { en: 'Lower back', fr: 'Bas du dos' },
-  traps: { en: 'Traps', fr: 'Trapèzes' },
-  'middle back': { en: 'Mid back', fr: 'Milieu du dos' },
-  lats: { en: 'Lats (back width)', fr: 'Grand dorsal' },
-  neck: { en: 'Neck', fr: 'Cou' },
+  abdominals: { en: 'Abs', fr: 'Abdominaux', tn: 'عضلات الكرش', tnLatn: 'Abdos' },
+  hamstrings: { en: 'Hamstrings', fr: 'Ischio-jambiers', tn: 'تالي الفخذ', tnLatn: 'Ischios' },
+  calves: { en: 'Calves', fr: 'Mollets', tn: 'الربلة', tnLatn: 'Mollets' },
+  shoulders: { en: 'Shoulders', fr: 'Épaules', tn: 'الكتاف', tnLatn: 'Épaules' },
+  adductors: { en: 'Inner thighs', fr: 'Adducteurs', tn: 'داخل الفخذ', tnLatn: 'Adducteurs' },
+  glutes: { en: 'Glutes', fr: 'Fessiers', tn: 'الفسّة', tnLatn: 'Fessiers' },
+  quadriceps: { en: 'Quads (front thighs)', fr: 'Quadriceps', tn: 'الكوادريسبس (قدّام الفخذ)', tnLatn: 'Quadriceps (9odem el fa5dh)' },
+  biceps: { en: 'Biceps', fr: 'Biceps', tn: 'البيسبس', tnLatn: 'Biceps' },
+  forearms: { en: 'Forearms', fr: 'Avant-bras', tn: 'الذراع', tnLatn: 'Avant-bras' },
+  abductors: { en: 'Outer hips', fr: 'Abducteurs', tn: 'برّا الفخذ', tnLatn: 'Abducteurs' },
+  triceps: { en: 'Triceps', fr: 'Triceps', tn: 'التريسبس', tnLatn: 'Triceps' },
+  chest: { en: 'Chest', fr: 'Pectoraux', tn: 'الصدر', tnLatn: 'Pectoraux' },
+  'lower back': { en: 'Lower back', fr: 'Bas du dos', tn: 'تحت الظهر', tnLatn: 'Lombaires' },
+  traps: { en: 'Traps', fr: 'Trapèzes', tn: 'الترابيز', tnLatn: 'Trapèzes' },
+  'middle back': { en: 'Mid back', fr: 'Milieu du dos', tn: 'وسط الظهر', tnLatn: 'Milieu du dos' },
+  lats: { en: 'Lats (back width)', fr: 'Grand dorsal', tn: 'الدورسال (عرض الظهر)', tnLatn: 'Dorsaux (3ordh edhahr)' },
+  neck: { en: 'Neck', fr: 'Cou', tn: 'الرقبة', tnLatn: 'Cou' },
 };
 
 /** Plain-language description of what each muscle does — shown on tap. */
@@ -124,92 +126,126 @@ export const MUSCLE_ROLES: Record<Muscle, LocalizedText> = {
   abdominals: {
     en: 'Brace and bend your trunk; protect your lower back when lifting.',
     fr: 'Gainent et fléchissent le tronc ; protègent le bas du dos.',
+    tn: 'يشدّو الوسط ويطويوه؛ يحميو تحت ظهرك كي ترفع.',
+    tnLatn: 'Ychaddou el wost w yetwiwah; y7emiw ta7t dhahrek ki terfa3.',
   },
   hamstrings: {
     en: 'Bend the knee and extend the hip — key for running and hinging.',
     fr: 'Fléchissent le genou et étendent la hanche — essentiels pour courir.',
+    tn: 'يطويو الركبة ويمدّو الحوض — مهمّين للجري وكي تطبّس.',
+    tnLatn: 'Yetwiw er rokba w ymeddou el 7oudh — mouhemmin lel jri w ki ttabbes.',
   },
   calves: {
     en: 'Point your foot and push off the ground when you walk or jump.',
     fr: 'Tendent le pied et propulsent quand tu marches ou sautes.',
+    tn: 'يمدّو ساقك ويدزّوك من الأرض كي تمشي ولا تنقز.',
+    tnLatn: 'Ymeddou sa9ek w ydezzouk mel ardh ki temchi wala ten9ez.',
   },
   shoulders: {
     en: 'Lift your arms forward, sideways and back; give the shoulders their shape.',
     fr: 'Lèvent les bras devant, sur le côté et derrière ; dessinent les épaules.',
+    tn: 'يهزّو ذراعاتك لقدّام، على الجنب ولتالي؛ يعطيو للكتاف شكلهم.',
+    tnLatn: 'Yhezzou dhra3atek l 9odem, 3al jneb w l tali; ya3tiw lel ktef chakelhom.',
   },
   adductors: {
     en: 'Pull the legs together and stabilise squats.',
     fr: 'Rapprochent les jambes et stabilisent le squat.',
+    tn: 'يلمّو الساقين لبعضهم ويثبّتو السكوات.',
+    tnLatn: 'Ylemmou essa9in l ba3dhhom w ythabtou el squat.',
   },
   glutes: {
     en: 'The biggest muscle: extends the hip, powers squats, stairs and sprints.',
     fr: 'Le plus gros muscle : étend la hanche, propulse squats, escaliers et sprints.',
+    tn: 'أكبر عضلة: تمدّ الحوض وتعطي القوّة للسكوات، الدروج والسبرينت.',
+    tnLatn: 'Akbar muscle: tmedd el 7oudh w ta3ti el 9owwa lel squat, edrouj w sprint.',
   },
   quadriceps: {
     en: 'Straighten the knee — the main muscle in squats, lunges and stairs.',
     fr: 'Tendent le genou — muscle principal des squats, fentes et escaliers.',
+    tn: 'يمدّو الركبة — العضلة الأساسية في السكوات، الفونت والدروج.',
+    tnLatn: 'Ymeddou er rokba — el muscle el asesi fel squat, les fentes w edrouj.',
   },
   biceps: {
     en: 'Bend the elbow and help every pulling movement.',
     fr: 'Fléchissent le coude et aident à chaque mouvement de tirage.',
+    tn: 'يطويو المرفق ويعاونو في كل حركة فيها تجبيد.',
+    tnLatn: 'Yetwiw el merfe9 w y3awnou f kol 7arka fiha tejbid.',
   },
   forearms: {
     en: 'Grip strength — holding weights, bags and bars.',
     fr: 'Force de préhension — tenir les poids, les sacs, la barre.',
+    tn: 'قوّة الشدّة — باش تشدّ الحديد، الشكاير والبار.',
+    tnLatn: '9owwet ech-chedda — bech tchedd el 7did, e chkayer w el barre.',
   },
   abductors: {
     en: 'Move the leg out to the side and keep your knees from caving in.',
     fr: 'Écartent la jambe et empêchent les genoux de rentrer.',
+    tn: 'يحلّو الساق على الجنب وما يخلّيوش ركابيك يدخلو لداخل.',
+    tnLatn: 'Y7ellou essa9 3al jneb w ma y5alliwch rkabik yod5lou l dekhel.',
   },
   triceps: {
     en: 'Straighten the elbow — two-thirds of your upper-arm size.',
     fr: 'Tendent le coude — deux tiers du volume du bras.',
+    tn: 'يمدّو المرفق — ثلثين من حجم ذراعك.',
+    tnLatn: 'Ymeddou el merfe9 — thoulthin men 7ajm dhra3ek.',
   },
   chest: {
     en: 'Push things away from you and bring the arms across the body.',
     fr: 'Poussent devant toi et rapprochent les bras devant le corps.',
+    tn: 'يدزّو الحاجات لقدّامك ويلمّو ذراعاتك قدّام بدنك.',
+    tnLatn: 'Ydezzou el 7ajet l 9odemek w ylemmou dhra3atek 9odem bdenek.',
   },
   'lower back': {
     en: 'Keep the spine straight when you bend and lift.',
     fr: 'Maintiennent la colonne droite quand tu te penches et soulèves.',
+    tn: 'يخلّيو سلسلة ظهرك مقادّة كي تطبّس وترفع.',
+    tnLatn: 'Y5alliw selslet dhahrek m9adda ki ttabbes w terfa3.',
   },
   traps: {
     en: 'Shrug and stabilise the shoulder blades; support the neck.',
     fr: 'Haussent et stabilisent les omoplates ; soutiennent le cou.',
+    tn: 'يهزّو الكتاف ويثبّتو اللوحات؛ يشدّو الرقبة.',
+    tnLatn: 'Yhezzou lektef w ythabtou el lou7at; ychaddou er ra9ba.',
   },
   'middle back': {
     en: 'Squeeze the shoulder blades together — good posture.',
     fr: 'Serrent les omoplates — une bonne posture.',
+    tn: 'يلمّو لوحات الكتاف لبعضهم — وقفة صحيحة.',
+    tnLatn: 'Ylemmou lou7at lektef l ba3dhhom — wa9fa s7i7a.',
   },
   lats: {
     en: 'Pull your arms down and back — give the back its V shape.',
     fr: 'Tirent les bras vers le bas et l’arrière — donnent le dos en V.',
+    tn: 'يجبدو ذراعاتك للتحت ولتالي — يعطيو للظهر شكل V.',
+    tnLatn: 'Yejbdou dhra3atek lel ta7t w l tali — ya3tiw lel dhahr chakl V.',
   },
   neck: {
     en: 'Hold and move your head.',
     fr: 'Tiennent et bougent la tête.',
+    tn: 'يشدّو راسك ويحرّكوه.',
+    tnLatn: 'Ychaddou rasek w y7arkouh.',
   },
 };
 
 export const EQUIPMENT_NAMES: Record<string, LocalizedText> = {
-  'body only': { en: 'Bodyweight', fr: 'Poids du corps' },
-  machine: { en: 'Machine', fr: 'Machine' },
-  other: { en: 'Other', fr: 'Autre' },
-  'foam roll': { en: 'Foam roller', fr: 'Rouleau' },
-  kettlebells: { en: 'Kettlebell', fr: 'Kettlebell' },
-  dumbbell: { en: 'Dumbbells', fr: 'Haltères' },
-  cable: { en: 'Cable', fr: 'Poulie' },
-  barbell: { en: 'Barbell', fr: 'Barre' },
-  bands: { en: 'Bands', fr: 'Élastiques' },
-  'medicine ball': { en: 'Medicine ball', fr: 'Médecine-ball' },
-  'exercise ball': { en: 'Swiss ball', fr: 'Ballon suisse' },
-  'e-z curl bar': { en: 'EZ bar', fr: 'Barre EZ' },
+  'body only': { en: 'Bodyweight', fr: 'Poids du corps', tn: 'وزن البدن', tnLatn: 'Poids du corps' },
+  machine: { en: 'Machine', fr: 'Machine', tn: 'ماشينة', tnLatn: 'Machine' },
+  other: { en: 'Other', fr: 'Autre', tn: 'حاجة أخرى', tnLatn: 'Autre' },
+  'foam roll': { en: 'Foam roller', fr: 'Rouleau', tn: 'رولو', tnLatn: 'Rouleau' },
+  kettlebells: { en: 'Kettlebell', fr: 'Kettlebell', tn: 'كيتلبال', tnLatn: 'Kettlebell' },
+  dumbbell: { en: 'Dumbbells', fr: 'Haltères', tn: 'هالتار', tnLatn: 'Haltères' },
+  cable: { en: 'Cable', fr: 'Poulie', tn: 'بولي', tnLatn: 'Poulie' },
+  barbell: { en: 'Barbell', fr: 'Barre', tn: 'بار', tnLatn: 'Barre' },
+  bands: { en: 'Bands', fr: 'Élastiques', tn: 'لاستيك', tnLatn: 'Élastiques' },
+  'medicine ball': { en: 'Medicine ball', fr: 'Médecine-ball', tn: 'ميديسين بول', tnLatn: 'Médecine-ball' },
+  'exercise ball': { en: 'Swiss ball', fr: 'Ballon suisse', tn: 'بالون سويسري', tnLatn: 'Ballon suisse' },
+  'e-z curl bar': { en: 'EZ bar', fr: 'Barre EZ', tn: 'بار EZ', tnLatn: 'Barre EZ' },
 };
 
 export const LEVEL_NAMES: Record<Exercise['level'], LocalizedText> = {
-  beginner: { en: 'Beginner', fr: 'Débutant' },
-  intermediate: { en: 'Intermediate', fr: 'Intermédiaire' },
-  expert: { en: 'Advanced', fr: 'Avancé' },
+  beginner: { en: 'Beginner', fr: 'Débutant', tn: 'مبتدئ', tnLatn: 'Débutant' },
+  intermediate: { en: 'Intermediate', fr: 'Intermédiaire', tn: 'متوسّط', tnLatn: 'Intermédiaire' },
+  expert: { en: 'Advanced', fr: 'Avancé', tn: 'متقدّم', tnLatn: 'Avancé' },
 };
 
 /** Body-highlighter data: primary muscles strong, secondary muscles light. */

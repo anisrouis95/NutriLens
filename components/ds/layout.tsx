@@ -21,7 +21,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ArrowLeft, ChevronDown, ChevronRight, Info, TriangleAlert } from 'lucide-react-native';
 import { motion, radius, space, useTokens } from '@/theme';
-import { Appear, IconButton, Tap, Txt } from './primitives';
+import { Appear, DirIcon, IconButton, Tap, Txt } from './primitives';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const TOP_BAR_HEIGHT = 64;
 /** Space the floating navigation bar needs at the bottom of tab screens. */
@@ -72,6 +73,7 @@ export function Screen({
   const t = useTokens();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { L } = useLanguage();
   const y = useSharedValue(0);
   const scrolled = useSharedValue(false);
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -123,9 +125,9 @@ export function Screen({
         <Animated.View style={[styles.bar, { paddingTop: insets.top, height: TOP_BAR_HEIGHT + insets.top }, barStyle]}>
           {back ? (
             <IconButton
-              label="Back"
+              label={L({ en: 'Back', fr: 'Retour', tn: 'ارجع', tnLatn: 'Erja3' })}
               onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')))}
-              icon={(c) => <ArrowLeft size={24} color={c} />}
+              icon={(c) => <DirIcon icon={ArrowLeft} size={24} color={c} />}
             />
           ) : (
             <View style={{ width: space.sm }} />
@@ -252,7 +254,7 @@ export function ListItem({
         ) : null}
       </View>
       {trailing}
-      {chevron ? <ChevronRight size={20} color={t.textTertiary} /> : null}
+      {chevron ? <DirIcon icon={ChevronRight} size={20} color={t.textTertiary} /> : null}
     </View>
   );
   return (
