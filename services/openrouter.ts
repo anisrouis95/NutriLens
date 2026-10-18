@@ -13,10 +13,13 @@ const API = 'https://openrouter.ai/api/v1';
  * first); the live list fills in the rest, and OpenRouter's own free router
  * comes last as a catch-all.
  */
-const PREFERRED = [/gemma-4-31b/i, /gemma-4/i, /gemma/i, /gemini/i, /qwen.*vl/i, /llama-4/i, /mistral-small/i, /inkling/i, /nemotron.*omni/i];
+const PREFERRED = [/gemma-4-31b/i, /gemma-4/i, /gemma/i, /gemini/i, /qwen.*vl/i, /llama-4/i, /mistral-small/i, /nemotron.*omni/i];
 const ROUTER = 'openrouter/free';
-/** Free entries that aren't general assistants (classifiers, music). */
-const NOT_ASSISTANTS = /safety|guard|moderation|lyria|music|embed/i;
+/**
+ * Free entries that aren't general assistants (classifiers, music), or that
+ * OpenRouter only serves to coding agents (Inkling answers apps with a 403).
+ */
+const NOT_ASSISTANTS = /safety|guard|moderation|lyria|music|embed|inkling/i;
 
 const HEADERS = { 'Content-Type': 'application/json', 'X-Title': 'Tounsi Fit' };
 
@@ -133,8 +136,13 @@ export async function generateOpenRouter(key: string, opts: GenerateOptions): Pr
       lastError = new GeminiError('bad_response', `${model}: empty reply`);
       continue;
     }
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401) {
       throw new GeminiError('invalid_key', 'The OpenRouter key was rejected');
+    }
+    if (res.status === 403) {
+      // A refusal for this model only (moderation, gated endpoint), not the key.
+      lastError = new GeminiError('server', `${model}: ${body.slice(0, 200)}`);
+      continue;
     }
     if (res.status === 404 && /data policy|privacy/i.test(body)) {
       // Free endpoints need "allow training / logging" in the account's privacy settings.
