@@ -8,6 +8,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Keyboard,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -731,7 +732,9 @@ export default function WorkoutScreen() {
   const bottomSpace = DOCK + insets.bottom + space.xl;
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.ground }}>
+    // Shortens the exercise pages while the keyboard is up, so the set being
+    // typed scrolls into view above it (Android no longer resizes the window).
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: t.ground }}>
       {/* Story bars and the session line, on black above the demo. */}
       <View style={[styles.band, { paddingTop: insets.top + space.xs }]}>
         <StoryBars
@@ -901,7 +904,7 @@ export default function WorkoutScreen() {
           />
         </View>
       </Sheet>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

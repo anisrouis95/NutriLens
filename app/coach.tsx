@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Animated, {
   cancelAnimation,
@@ -184,171 +184,169 @@ ${ramadanContext}` : ''}`;
   const canSend = !!input.trim() && !busy;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.ground }} behavior="padding">
-      <Screen
-        back
-        title={L({ en: 'Coach', fr: 'Coach', tn: 'الكوتش', tnLatn: 'Coach' })}
-        largeTitle={false}
-        scroll={false}
-        padded={false}
-        actions={
-          messages.length ? (
+    <Screen
+      back
+      title={L({ en: 'Coach', fr: 'Coach', tn: 'الكوتش', tnLatn: 'Coach' })}
+      largeTitle={false}
+      scroll={false}
+      padded={false}
+      actions={
+        messages.length ? (
+          <IconButton
+            label={L({ en: 'Clear conversation', fr: 'Effacer la conversation', tn: 'فسّخ المحادثة', tnLatn: 'Fasa5 el discussion' })}
+            onPress={clearHistory}
+            disabled={busy}
+            icon={(c) => <Trash2 size={22} color={c} />}
+          />
+        ) : null
+      }
+      footer={
+        <View style={styles.inputBar}>
+          <Field
+            containerStyle={{ flex: 1 }}
+            value={input}
+            onChangeText={setInput}
+            placeholder={L({ en: 'Ask your coach…', fr: 'Demande à ton coach…', tn: 'سقسي الكوتش متاعك…', tnLatn: 'Sa9si el coach mte3ek…' })}
+            accessibilityLabel={L({ en: 'Message to your coach', fr: 'Message pour ton coach', tn: 'ميساج للكوتش متاعك', tnLatn: 'Message lel coach mte3ek' })}
+            multiline
+            style={{ maxHeight: 120 }}
+          />
+          <View style={{ paddingBottom: 2 }}>
             <IconButton
-              label={L({ en: 'Clear conversation', fr: 'Effacer la conversation', tn: 'فسّخ المحادثة', tnLatn: 'Fasa5 el discussion' })}
-              onPress={clearHistory}
-              disabled={busy}
-              icon={(c) => <Trash2 size={22} color={c} />}
+              variant="filled"
+              label={L({ en: 'Send', fr: 'Envoyer', tn: 'ابعث', tnLatn: 'Eb3ath' })}
+              onPress={() => send()}
+              disabled={!canSend}
+              icon={(c) => <Send size={22} color={c} />}
             />
-          ) : null
-        }
-        footer={
-          <View style={styles.inputBar}>
-            <Field
-              containerStyle={{ flex: 1 }}
-              value={input}
-              onChangeText={setInput}
-              placeholder={L({ en: 'Ask your coach…', fr: 'Demande à ton coach…', tn: 'سقسي الكوتش متاعك…', tnLatn: 'Sa9si el coach mte3ek…' })}
-              accessibilityLabel={L({ en: 'Message to your coach', fr: 'Message pour ton coach', tn: 'ميساج للكوتش متاعك', tnLatn: 'Message lel coach mte3ek' })}
-              multiline
-              style={{ maxHeight: 120 }}
-            />
-            <View style={{ paddingBottom: 2 }}>
-              <IconButton
-                variant="filled"
-                label={L({ en: 'Send', fr: 'Envoyer', tn: 'ابعث', tnLatn: 'Eb3ath' })}
-                onPress={() => send()}
-                disabled={!canSend}
-                icon={(c) => <Send size={22} color={c} />}
-              />
-            </View>
           </View>
-        }
-      >
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-          {!messages.length ? (
-            <View>
-              <Txt variant="titleSmall">
-                {L({
-                  en: 'Ask about food, your plan or training',
-                  fr: 'Pose tes questions sur la nutrition, ton plan ou l’entraînement',
-                  tn: 'سقسي على الماكلة، البرنامج متاعك ولّا التمرين',
-                  tnLatn: 'Sa9si 3al makla, el programme mte3ek walla el sport',
-                })}
-              </Txt>
-              <Txt variant="caption" tone="secondary" style={{ marginTop: space.xs }}>
-                {L({
-                  en: 'The coach sees your profile, plan, today’s food and recent workouts, so the answers are about you.',
-                  fr: 'Le coach voit ton profil, ton plan, tes repas du jour et tes séances : les réponses te concernent vraiment.',
-                  tn: 'الكوتش يشوف البروفيل متاعك، البرنامج، ماكلة اليوم والحصص الأخيرة، يعني الجوابات تكون عليك إنت.',
-                  tnLatn: 'El coach ychouf el profil mte3ek, el programme, makla mte3 lyoum w les séances le5ra, ya3ni les réponses ykounou 3lik enti.',
-                })}
-              </Txt>
-              <ChipRow style={{ marginTop: space.lg }}>
-                {suggestions.map((s) => (
-                  <Chip key={s} label={s} onPress={() => send(s)} multiline style={{ maxWidth: '100%' }} />
-                ))}
-              </ChipRow>
-            </View>
-          ) : null}
+        </View>
+      }
+    >
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+        {!messages.length ? (
+          <View>
+            <Txt variant="titleSmall">
+              {L({
+                en: 'Ask about food, your plan or training',
+                fr: 'Pose tes questions sur la nutrition, ton plan ou l’entraînement',
+                tn: 'سقسي على الماكلة، البرنامج متاعك ولّا التمرين',
+                tnLatn: 'Sa9si 3al makla, el programme mte3ek walla el sport',
+              })}
+            </Txt>
+            <Txt variant="caption" tone="secondary" style={{ marginTop: space.xs }}>
+              {L({
+                en: 'The coach sees your profile, plan, today’s food and recent workouts, so the answers are about you.',
+                fr: 'Le coach voit ton profil, ton plan, tes repas du jour et tes séances : les réponses te concernent vraiment.',
+                tn: 'الكوتش يشوف البروفيل متاعك، البرنامج، ماكلة اليوم والحصص الأخيرة، يعني الجوابات تكون عليك إنت.',
+                tnLatn: 'El coach ychouf el profil mte3ek, el programme, makla mte3 lyoum w les séances le5ra, ya3ni les réponses ykounou 3lik enti.',
+              })}
+            </Txt>
+            <ChipRow style={{ marginTop: space.lg }}>
+              {suggestions.map((s) => (
+                <Chip key={s} label={s} onPress={() => send(s)} multiline style={{ maxWidth: '100%' }} />
+              ))}
+            </ChipRow>
+          </View>
+        ) : null}
 
-          {messages.map((m, i) =>
-            m.role === 'user' ? (
-              <Appear key={i} style={[styles.userBubble, { backgroundColor: t.accentSoft }]}>
-                <Txt selectable>{m.text}</Txt>
-              </Appear>
-            ) : (
-              <Appear key={i} style={styles.answer}>
-                <Bot size={20} color={t.textSecondary} style={{ marginTop: 2 }} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <RichText text={m.text} />
-                </View>
-              </Appear>
-            ),
-          )}
-
-          {busy ? (
-            <Appear style={styles.answer}>
-              <Bot size={20} color={t.textSecondary} style={{ marginTop: 2 }} />
-              <TypingDots label={L({ en: 'The coach is writing', fr: 'Le coach écrit', tn: 'الكوتش قاعد يكتب', tnLatn: 'El coach 9a3ed yekteb' })} />
+        {messages.map((m, i) =>
+          m.role === 'user' ? (
+            <Appear key={i} style={[styles.userBubble, { backgroundColor: t.accentSoft }]}>
+              <Txt selectable>{m.text}</Txt>
             </Appear>
-          ) : null}
+          ) : (
+            <Appear key={i} style={styles.answer}>
+              <Bot size={20} color={t.textSecondary} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <RichText text={m.text} />
+              </View>
+            </Appear>
+          ),
+        )}
 
-          {error ? (
-            <Why
-              key={error}
-              tone="warning"
-              initiallyOpen
-              title={
-                keyProblem
+        {busy ? (
+          <Appear style={styles.answer}>
+            <Bot size={20} color={t.textSecondary} style={{ marginTop: 2 }} />
+            <TypingDots label={L({ en: 'The coach is writing', fr: 'Le coach écrit', tn: 'الكوتش قاعد يكتب', tnLatn: 'El coach 9a3ed yekteb' })} />
+          </Appear>
+        ) : null}
+
+        {error ? (
+          <Why
+            key={error}
+            tone="warning"
+            initiallyOpen
+            title={
+              keyProblem
+                ? L({
+                  en: 'The coach needs a free AI key',
+                  fr: 'Le coach a besoin d’une clé IA gratuite',
+                  tn: 'الكوتش يلزمو API key بلاش',
+                  tnLatn: 'El coach yelzmou API key blech',
+                })
+                : error === 'data_policy'
                   ? L({
-                    en: 'The coach needs a free AI key',
-                    fr: 'Le coach a besoin d’une clé IA gratuite',
-                    tn: 'الكوتش يلزمو API key بلاش',
-                    tnLatn: 'El coach yelzmou API key blech',
+                    en: 'OpenRouter needs one setting',
+                    fr: 'OpenRouter demande un réglage',
+                    tn: 'OpenRouter يلزمو إعداد واحد',
+                    tnLatn: 'OpenRouter yelzmou réglage wa7ed',
                   })
-                  : error === 'data_policy'
-                    ? L({
-                      en: 'OpenRouter needs one setting',
-                      fr: 'OpenRouter demande un réglage',
-                      tn: 'OpenRouter يلزمو إعداد واحد',
-                      tnLatn: 'OpenRouter yelzmou réglage wa7ed',
-                    })
-                    : error === 'quota'
-                    ? L({
-                      en: 'Free AI limit reached — try again in a minute',
-                      fr: 'Limite IA gratuite atteinte — réessaie dans une minute',
-                      tn: 'وصلت للحدّ المجّاني متاع الـ IA — عاود بعد دقيقة',
-                      tnLatn: 'Wselt lel limite gratuite mte3 l IA — 3awed ba3d d9i9a',
-                    })
-                    : L({
-                      en: 'Could not reach the coach',
-                      fr: 'Impossible de joindre le coach',
-                      tn: 'ما نجّمناش نوصلو للكوتش',
-                      tnLatn: 'Ma najjamnech nwosslou lel coach',
-                    })
-              }
-            >
-              {keyProblem ? (
-                <>
-                  <Txt variant="caption" tone="secondary" style={{ marginBottom: space.md }}>
-                    {L({
-                      en: 'It’s free and takes two minutes: create a Gemini key in Google AI Studio, or use an OpenRouter key, and paste it in your profile.',
-                      fr: 'C’est gratuit et ça prend deux minutes : crée une clé Gemini dans Google AI Studio, ou utilise une clé OpenRouter, et colle-la dans ton profil.',
-                      tn: 'بلاش وياخو دقيقتين: اعمل Gemini key في Google AI Studio، ولّا استعمل OpenRouter key، وكوليها في البروفيل متاعك.',
-                      tnLatn: 'Blech w ya5ou d9i9tin: a3mel Gemini key f Google AI Studio, walla esta3mel OpenRouter key, w colliha fel profil mte3ek.',
-                    })}
-                  </Txt>
-                  <Button variant="tonal" label={L({
-                    en: 'Set it up',
-                    fr: 'Configurer',
-                    tn: 'حطّ الـ key',
-                    tnLatn: '7ott el key',
-                  })} onPress={() => router.push('/profile')} />
-                </>
-              ) : error === 'data_policy' ? (
-                <Txt variant="caption" tone="secondary">
+                  : error === 'quota'
+                  ? L({
+                    en: 'Free AI limit reached — try again in a minute',
+                    fr: 'Limite IA gratuite atteinte — réessaie dans une minute',
+                    tn: 'وصلت للحدّ المجّاني متاع الـ IA — عاود بعد دقيقة',
+                    tnLatn: 'Wselt lel limite gratuite mte3 l IA — 3awed ba3d d9i9a',
+                  })
+                  : L({
+                    en: 'Could not reach the coach',
+                    fr: 'Impossible de joindre le coach',
+                    tn: 'ما نجّمناش نوصلو للكوتش',
+                    tnLatn: 'Ma najjamnech nwosslou lel coach',
+                  })
+            }
+          >
+            {keyProblem ? (
+              <>
+                <Txt variant="caption" tone="secondary" style={{ marginBottom: space.md }}>
                   {L({
-                    en: 'OpenRouter blocked its free models because of your account’s privacy settings. On openrouter.ai open Settings → Privacy and allow free endpoints (they may log prompts), then retry.',
-                    fr: 'OpenRouter a bloqué ses modèles gratuits à cause des réglages de confidentialité de ton compte. Sur openrouter.ai, ouvre Settings → Privacy et autorise les endpoints gratuits (ils peuvent enregistrer les requêtes), puis réessaie.',
-                    tn: 'OpenRouter سكّر الموديلات المجّانية متاعو خاطر إعدادات الخصوصية متاع الكونت متاعك. في openrouter.ai حلّ Settings → Privacy واسمح بالـ free endpoints (ينجّمو يسجّلو الطلبات)، ومبعد عاود.',
-                    tnLatn: 'OpenRouter sakker les modèles gratuits mte3ou 5ater les paramètres de confidentialité mte3 compte mte3ek. F openrouter.ai 7ell Settings → Privacy w esma7 bel free endpoints (ynajmou ysajlou les requêtes), w ba3d 3awed.',
+                    en: 'It’s free and takes two minutes: create a Gemini key in Google AI Studio, or use an OpenRouter key, and paste it in your profile.',
+                    fr: 'C’est gratuit et ça prend deux minutes : crée une clé Gemini dans Google AI Studio, ou utilise une clé OpenRouter, et colle-la dans ton profil.',
+                    tn: 'بلاش وياخو دقيقتين: اعمل Gemini key في Google AI Studio، ولّا استعمل OpenRouter key، وكوليها في البروفيل متاعك.',
+                    tnLatn: 'Blech w ya5ou d9i9tin: a3mel Gemini key f Google AI Studio, walla esta3mel OpenRouter key, w colliha fel profil mte3ek.',
                   })}
                 </Txt>
-              ) : (
-                <Txt variant="caption" tone="secondary">
-                  {L({
-                    en: 'Check your internet connection and retry.',
-                    fr: 'Vérifie ta connexion internet et réessaie.',
-                    tn: 'ثبّت في الكونيكسيون متاعك وعاود.',
-                    tnLatn: 'Thabbet fel connexion mte3ek w 3awed.',
-                  })}
-                </Txt>
-              )}
-            </Why>
-          ) : null}
-        </ScrollView>
-      </Screen>
-    </KeyboardAvoidingView>
+                <Button variant="tonal" label={L({
+                  en: 'Set it up',
+                  fr: 'Configurer',
+                  tn: 'حطّ الـ key',
+                  tnLatn: '7ott el key',
+                })} onPress={() => router.push('/profile')} />
+              </>
+            ) : error === 'data_policy' ? (
+              <Txt variant="caption" tone="secondary">
+                {L({
+                  en: 'OpenRouter blocked its free models because of your account’s privacy settings. On openrouter.ai open Settings → Privacy and allow free endpoints (they may log prompts), then retry.',
+                  fr: 'OpenRouter a bloqué ses modèles gratuits à cause des réglages de confidentialité de ton compte. Sur openrouter.ai, ouvre Settings → Privacy et autorise les endpoints gratuits (ils peuvent enregistrer les requêtes), puis réessaie.',
+                  tn: 'OpenRouter سكّر الموديلات المجّانية متاعو خاطر إعدادات الخصوصية متاع الكونت متاعك. في openrouter.ai حلّ Settings → Privacy واسمح بالـ free endpoints (ينجّمو يسجّلو الطلبات)، ومبعد عاود.',
+                  tnLatn: 'OpenRouter sakker les modèles gratuits mte3ou 5ater les paramètres de confidentialité mte3 compte mte3ek. F openrouter.ai 7ell Settings → Privacy w esma7 bel free endpoints (ynajmou ysajlou les requêtes), w ba3d 3awed.',
+                })}
+              </Txt>
+            ) : (
+              <Txt variant="caption" tone="secondary">
+                {L({
+                  en: 'Check your internet connection and retry.',
+                  fr: 'Vérifie ta connexion internet et réessaie.',
+                  tn: 'ثبّت في الكونيكسيون متاعك وعاود.',
+                  tnLatn: 'Thabbet fel connexion mte3ek w 3awed.',
+                })}
+              </Txt>
+            )}
+          </Why>
+        ) : null}
+      </ScrollView>
+    </Screen>
   );
 }
 

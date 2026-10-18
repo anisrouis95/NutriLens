@@ -3,7 +3,7 @@
 // empty states, skeletons and the lesson rich-text renderer.
 
 import React, { useEffect, useState } from 'react';
-import { RefreshControlProps, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, RefreshControlProps, ScrollViewProps, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -119,8 +119,11 @@ export function Screen({
     </Animated.View>
   ) : null;
 
+  // The app draws edge to edge, so Android no longer shrinks the window for the
+  // keyboard. Padding the screen by the keyboard's height shortens the scroll
+  // view instead, and Android then scrolls the focused field back into view.
   return (
-    <View style={{ flex: 1, backgroundColor: t.ground }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: t.ground }}>
       {hasBar ? (
         <Animated.View style={[styles.bar, { paddingTop: insets.top, height: TOP_BAR_HEIGHT + insets.top }, barStyle]}>
           {back ? (
@@ -166,7 +169,7 @@ export function Screen({
           {footer}
         </View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
