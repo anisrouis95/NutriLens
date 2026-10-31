@@ -80,7 +80,6 @@ export default function TodayScreen() {
 
   const nextDay = nextWorkoutDay(workoutPlan, sessions);
   const trainedToday = sessions.some((s) => s.date === today && s.finishedAt);
-  const perWeek = workoutPlan?.daysPerWeek ?? 0;
 
   const read = new Set(settings.readLessons ?? []);
   const nextLesson = lessons.find((l) => l.id === lessonOrder.find((id) => !read.has(id)));
@@ -220,7 +219,7 @@ export default function TodayScreen() {
         </View>
 
         <View style={{ marginTop: space.lg }}>
-          <WeekDays perWeek={perWeek} />
+          <WeekDays />
         </View>
 
         {/* Fuel: calories left, then the three macros. */}

@@ -19,6 +19,7 @@ import { SnackbarProvider } from '@/components/ds';
 import { fontAssets, useTokens } from '@/theme';
 import { useAutoBackup } from '@/hooks/useAutoBackup';
 import { useCloudBackup } from '@/hooks/useGoogleSync';
+import { useNotificationSync } from '@/hooks/useNotifications';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -55,6 +56,8 @@ function RootLayoutNav() {
   // and uploads to the linked Google account.
   useAutoBackup();
   useCloudBackup();
+  // Reminders follow the data (training days, meals, Ramadan), and taps open their screen.
+  useNotificationSync();
 
   // Paint the window behind every screen in the theme's ground (no white flash).
   useEffect(() => {
@@ -110,6 +113,9 @@ function RootLayoutNav() {
           <Stack.Screen name="activity" />
           <Stack.Screen name="cardio" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="ramadan" />
+          <Stack.Screen name="notifications" />
+          <Stack.Screen name="schedule" />
+          <Stack.Screen name="calisthenics" />
         </Stack>
       </SnackbarProvider>
     </NavigationThemeProvider>

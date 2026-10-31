@@ -68,6 +68,7 @@ export interface ExerciseExtra {
 import { t } from './text';
 import { exerciseExtrasA } from './exerciseExtrasA';
 import { exerciseExtrasB } from './exerciseExtrasB';
+import { customExtras } from './customExercises';
 
 // ---------------------------------------------------------------------------
 // Slot descriptions (plain language for a beginner)
@@ -407,4 +408,4 @@ export const slotCandidates: Record<MovementSlot, Record<EquipmentProfile, strin
 // Per-exercise coaching data
 // ---------------------------------------------------------------------------
 
-export const exerciseExtras: Record<string, ExerciseExtra> = { ...exerciseExtrasA, ...exerciseExtrasB };
+export const exerciseExtras: Record<string, ExerciseExtra> = { ...exerciseExtrasA, ...exerciseExtrasB, ...customExtras };

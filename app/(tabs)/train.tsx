@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -7,6 +7,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
+  BellRing,
+  BatteryLow,
   BookOpen,
   CalendarDays,
   Check,
@@ -16,6 +18,7 @@ import {
   CircleHelp,
   Dumbbell,
   HeartPulse,
+  PersonStanding,
   Play,
   RefreshCw,
   TrendingUp,
@@ -49,6 +52,7 @@ import { MUSCLE_TO_SLUGS, Muscle, exerciseImageUrls, exerciseName, getExercise }
 import { generateWorkoutPlan, nextWorkoutDay, swapInPlan } from '@/lib/workoutGenerator';
 import SwapSheet from '@/components/train/SwapSheet';
 import { conflicts, LIMITATION_NAMES } from '@/lib/swap';
+import { notificationsSupported, permission, requestPermission } from '@/services/notifications';
 import { addDays } from '@/lib/nutritionMath';
 import { motion, space, useTokens } from '@/theme';
 import type { CardioSession, PlannedExercise, Sex, WorkoutDay, WorkoutSession } from '@/types';
@@ -174,6 +178,7 @@ function ExerciseRows({ day, style }: { day: WorkoutDay; style?: StyleProp<ViewS
           currentId={swapping.exerciseId}
           slot={swapping.slot}
           exclude={day.exercises.filter((_, k) => k !== swapIndex).map((e) => e.exerciseId)}
+          ladder={swapping.ladder}
           onPick={(id) => {
             if (profile && workoutPlan) setWorkoutPlan(swapInPlan(workoutPlan, day.id, swapIndex, id, profile));
             setSwapIndex(null);
@@ -195,6 +200,20 @@ function NextSession({ day, done, minutes }: { day: WorkoutDay; done: boolean; m
         day={day}
         minutes={minutes}
         onStart={() => router.push({ pathname: '/workout/[dayId]', params: { dayId: day.id } })}
+      />
+      {/* Exhausted after work: still train, one set fewer per exercise at the same weights. */}
+      <Button
+        variant="text"
+        label={L({ en: 'Tired today? Lighter session', fr: 'Fatigué ? Séance plus légère', tn: 'فشلان اليوم؟ حصّة أخفّ', tnLatn: 'Fechlan lyoum? Séance a5af' })}
+        accessibilityLabel={L({
+          en: 'Tired today? Start a lighter session: one set fewer per exercise',
+          fr: 'Fatigué ? Lancer une séance plus légère : une série de moins par exercice',
+          tn: 'فشلان اليوم؟ ابدا حصّة أخفّ: سيري أقل في كل تمرين',
+          tnLatn: 'Fechlan lyoum? Ebda séance a5af: série a9al f kol exercice',
+        })}
+        icon={(c) => <BatteryLow size={20} color={c} />}
+        onPress={() => router.push({ pathname: '/workout/[dayId]', params: { dayId: day.id, light: '1' } })}
+        style={{ marginTop: space.sm, marginLeft: -space.md, alignSelf: 'flex-start' }}
       />
       {done ? <DoneThisWeek /> : null}
       <ExerciseRows day={day} style={{ marginTop: space.lg }} />
@@ -270,6 +289,49 @@ function DayBlock({
   );
 }
 
+/** Once, until answered: turn on the lock-screen rest timer and training-day reminders. */
+function NotificationPrompt() {
+  const t = useTokens();
+  const snackbar = useSnackbar();
+  const { L, language } = useLanguage();
+  const { settings, updateSettings } = useAppData();
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (!notificationsSupported || settings.askedNotifications) return;
+    permission().then((p) => setShow(p === 'undetermined'));
+  }, [settings.askedNotifications]);
+  if (!show) return null;
+  const answer = async (yes: boolean) => {
+    setShow(false);
+    updateSettings({ askedNotifications: true });
+    if (yes && (await requestPermission(language)) === 'granted') {
+      snackbar.show(L({ en: 'Notifications on', fr: 'Notifications activées', tn: 'الإشعارات خدّامين', tnLatn: 'Les notifications 5addamin' }));
+    }
+  };
+  return (
+    <View style={[styles.prompt, { backgroundColor: t.surface }]}>
+      <View style={styles.promptHead}>
+        <BellRing size={20} color={t.accentText} />
+        <Txt variant="bodyStrong" style={{ flex: 1 }}>
+          {L({ en: 'Rest timer on your lock screen', fr: 'Le minuteur de repos sur l’écran de verrouillage', tn: 'وقت الراحة على شاشة القفل', tnLatn: 'Wa9t el repos 3la écran el 9fel' })}
+        </Txt>
+      </View>
+      <Txt variant="caption" tone="secondary" style={{ marginTop: space.xs }}>
+        {L({
+          en: 'And a reminder on your training days. Choose which ones in Profile → Notifications.',
+          fr: 'Et un rappel les jours d’entraînement. Choisis lesquels dans Profil → Notifications.',
+          tn: 'وتذكير في أيّام التمرين. اختار شنوّة تحب في البروفيل ← الإشعارات.',
+          tnLatn: 'W rappel f iyem el sport. E5tar chnowa t7eb fel Profil → Notifications.',
+        })}
+      </Txt>
+      <View style={styles.promptActions}>
+        <Button label={L({ en: 'Turn on', fr: 'Activer', tn: 'شعّل', tnLatn: 'Cha33el' })} onPress={() => answer(true)} />
+        <Button variant="text" label={L({ en: 'Not now', fr: 'Pas maintenant', tn: 'موش توّا', tnLatn: 'Mouch taw' })} onPress={() => answer(false)} />
+      </View>
+    </View>
+  );
+}
+
 /** One row of the "About your program" list; opens its explanation in place. */
 function Disclosure({
   title,
@@ -321,7 +383,7 @@ export default function TrainScreen() {
   const fmt = useFormat();
   const snackbar = useSnackbar();
   const { L, language, formatDate } = useLanguage();
-  const { profile, workoutPlan, setWorkoutPlan, sessions, cardio, today } = useAppData();
+  const { profile, workoutPlan, setWorkoutPlan, sessions, cardio, today, settings } = useAppData();
   // Which of the other sessions is open (the next session is always shown in full).
   const [open, setOpen] = useState<string | null>(null);
   const [confirmRebuild, setConfirmRebuild] = useState(false);
@@ -388,7 +450,7 @@ export default function TrainScreen() {
   return (
     <View style={{ flex: 1 }}>
       <Screen title={title} subtitle={L(workoutPlan.splitName)} bottomSpace={NAV_BAR_SPACE}>
-        <WeekDays perWeek={workoutPlan.daysPerWeek} />
+        <WeekDays />
         <View style={styles.weekActions}>
           <Button
             label={L({ en: 'Log cardio', fr: 'Noter du cardio', tn: 'سجّل كارديو', tnLatn: 'Sajjel cardio' })}
@@ -405,6 +467,8 @@ export default function TrainScreen() {
             style={styles.grow}
           />
         </View>
+
+        <NotificationPrompt />
 
         <RamadanTrainingHint style={{ marginTop: space.lg }} />
 
@@ -430,6 +494,17 @@ export default function TrainScreen() {
         ) : null}
 
         <View style={styles.buttons}>
+          <Button
+            label={
+              (settings.style ?? 'weights') === 'weights'
+                ? L({ en: 'Calisthenics', fr: 'Calisthenics', tn: 'كاليستينيكس', tnLatn: 'Calisthenics' })
+                : L({ en: 'My ladders', fr: 'Mes échelles', tn: 'السلالم متاعي', tnLatn: 'Es-salelem mte3i' })
+            }
+            variant="tonal"
+            icon={(c) => <PersonStanding size={20} color={c} />}
+            onPress={() => router.push('/calisthenics')}
+            style={styles.grow}
+          />
           <Button
             label={L({ en: 'Exercise library', fr: 'Bibliothèque d’exercices', tn: 'مكتبة التمارين', tnLatn: 'Bibliothèque exercices' })}
             variant="tonal"
@@ -641,4 +716,7 @@ const styles = StyleSheet.create({
   },
   sheetActions: { gap: space.sm, marginTop: space.xl },
   volume: { fontSize: 26, lineHeight: 30 },
+  prompt: { borderRadius: 14, padding: space.lg, marginTop: space.lg },
+  promptHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  promptActions: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
 });

@@ -456,6 +456,11 @@ A 264dp full-width photo card, 20dp corners: the session's first exercise photo 
 ### Exercise Page (signature)
 Story bars at the top, the demo photo bleeding full width with no frame or badges, the exercise name in Display on its fade beside a tonal info icon button, the prescription line in Overline, then the set table (60dp set column, two Anton number inputs, a stamp check per row). Logging a set stamps its row volt, fills its story segment, and puts the rest clock in the dock slot in numLarge with +30s and skip pills; once over time, the clock and its label turn volt.
 
+Typing a weight or reps in a set fills the sets below it that are not done and were not typed in. Under the table: a volt-wash note when a rated set moved the sets below ("Set 2 felt easy: next sets 30 kg"), then the **Today** block between two hairlines (Overline label with a trending icon, the target in numMedium such as "30 kg × 10 · 10 · 10", its reason in a secondary caption) and a "How hard should a set be?" disclosure. After logging a set, the dock grows a 72dp row above the rest clock: "How was set N?" in Overline and three equal surface-high pills, Easy · Good · Hard; it goes away when answered or when the next set is logged.
+
+### Week rows
+The Train tab's week strip and the Training days screen share one day mark: a 36–38dp circle, volt filled for a training day (or a finished workout), a 2dp volt ring for "sometimes", surface-high for rest, a 1dp grey ring for today. On the Train strip a 6dp mark under each day carries the plan: volt for a training day to come, grey for one that passed undone, a volt ring for "sometimes"; tapping a day from today on opens a sheet to make it a training or rest day for that week only.
+
 ### Story Bars (signature)
 A row of slim round-ended segments 4dp apart, 4dp high in the workout band and 6dp for the week on Today. Each fills volt from the left over 320ms as its part completes; the current segment's empty track brightens to Border. Tappable segments get a 24dp touch strip.
 

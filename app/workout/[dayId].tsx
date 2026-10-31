@@ -44,13 +44,18 @@ import {
 } from '@/components/ds';
 import ExerciseAnimation, { ExerciseThumb } from '@/components/exercise/ExerciseAnimation';
 import { Exercise, exerciseImageUrls, exerciseName, getExercise } from '@/lib/exercises';
-import { prescription, progressionHint, swapInPlan } from '@/lib/workoutGenerator';
+import { prescription, swapInPlan } from '@/lib/workoutGenerator';
+import { afterRatedSet, historyFor, targetFor, type Adjustment, type PastSession, type Target } from '@/lib/coach';
+import { levelUps } from '@/lib/ladders';
 import SwapSheet from '@/components/train/SwapSheet';
 import { conflicts, LIMITATION_NAMES } from '@/lib/swap';
+import { EFFORT_HELP, EFFORT_NAMES, NOTE_COPY, reasonCopy } from '@/components/train/coachCopy';
+import { notificationSettings } from '@/lib/reminders';
+import { cancelRestOver, liveClear, liveRest, liveSession, scheduleRestOver } from '@/services/notifications';
 import type { MovementSlot } from '@/data/exerciseCuration';
 import { newId } from '@/lib/storage';
 import { fonts, radius, space, useTokens } from '@/theme';
-import type { LoggedSet, PlannedExercise, Profile, WorkoutSession } from '@/types';
+import type { Effort, LoggedSet, PlannedExercise, Profile, WorkoutDay, WorkoutSession } from '@/types';
 
 const SET_COL = 60;
 const CHECK = 44;
@@ -67,6 +72,10 @@ function nameSize(name: string) {
 }
 
 type Row = { s: LoggedSet; i: number };
+/** What a rated set changed for the sets after it (`n` = its number). */
+type Note = { n: number; change: Adjustment };
+/** The "how was it?" row above the rest clock. */
+const EFFORT_HEIGHT = 72;
 /** One exercise of the session: `planIndex`/`planId` locate it in the program, `pe` is what is done today (after a swap). */
 type Page = { pe: PlannedExercise; ex: Exercise; rows: Row[]; planIndex: number; planId: string };
 
@@ -200,8 +209,8 @@ const ExercisePage = memo(function ExercisePage({
   page,
   width,
   bottomSpace,
-  hint,
-  last,
+  target,
+  note,
   showWarmup,
   onUpdate,
   onToggle,
@@ -212,12 +221,13 @@ const ExercisePage = memo(function ExercisePage({
   page: Page;
   width: number;
   bottomSpace: number;
-  hint: ReturnType<typeof progressionHint>;
-  last: LoggedSet[];
+  target: Target;
+  /** What the last rated set changed in the sets below it. */
+  note?: Note;
   showWarmup: boolean;
-  onUpdate: (globalIndex: number, patch: Partial<LoggedSet>) => void;
+  onUpdate: (globalIndex: number, patch: Pick<Partial<LoggedSet>, 'weightKg' | 'reps'>) => void;
   onToggle: (globalIndex: number, restSec: number) => void;
-  onAdd: (exerciseId: string) => void;
+  onAdd: (page: Page) => void;
   onForm: (exerciseId: string) => void;
   onSwap: (page: Page) => void;
 }) {
@@ -233,6 +243,7 @@ const ExercisePage = memo(function ExercisePage({
   const rest = pe.restSec >= 120 ? `${Number.isInteger(min) ? min : fmt(min, 1)}${NB}min` : `${pe.restSec}${NB}s`;
   const currentRow = rows.findIndex(({ s }) => !s.done);
 
+  const last = target.last?.sets ?? [];
   // Best set of the last session: heaviest weight, then most reps.
   const best = [...last].sort((a, b) => b.weightKg - a.weightKg || b.reps - a.reps)[0];
   const lastText = best
@@ -242,33 +253,33 @@ const ExercisePage = memo(function ExercisePage({
       )
     : L({ en: 'First time', fr: 'Première fois', tn: 'أوّل مرّة', tnLatn: 'Awwel marra' });
 
-  const hintText =
-    hint.kind === 'first_time'
-      ? L(
-          {
-            en: 'First time: pick a weight you could lift ~{{max}} times, do {{min}} clean reps, note it.',
-            fr: 'Première fois : prends une charge que tu pourrais soulever ~{{max}} fois, fais {{min}} répétitions propres, note-la.',
-            tn: 'أوّل مرّة: اختار ثقل تنجّم تهزّو ~{{max}} مرّة، اعمل {{min}} مرّات نظاف، وسجّلو.',
-            tnLatn: 'Awwel marra: e5tar charge tnajjem thezzha ~{{max}} marra, a3mel {{min}} reps ndhaf, w sajjelha.',
-          },
-          { min: pe.repsMin, max: pe.repsMax + 3 },
-        )
-      : hint.kind === 'add_weight'
-        ? L(
-            {
-              en: 'You hit the top last time — go up to {{kg}} kg today.',
-              fr: 'Tu as atteint le haut la dernière fois — monte à {{kg}} kg aujourd’hui.',
-              tn: 'المرّة اللي فاتت وصلت للفوق — طلّع لـ {{kg}} kg اليوم.',
-              tnLatn: 'L marra eli fetet wsolt lel fou9 — tala3 l {{kg}} kg lyoum.',
-            },
-            { kg: kg(hint.weightKg ?? 0) },
-          )
-        : L({
-            en: 'Beat last time by one rep on at least one set.',
-            fr: 'Fais une répétition de plus que la dernière fois sur au moins une série.',
-            tn: 'زيد مرّة على المرّة اللي فاتت في سيري وحدة على الأقل.',
-            tnLatn: 'Zid rep wa7da 3al marra eli fetet f série wa7da 3al a9al.',
-          });
+  // Today's target: "25 kg × 10 · 10 · 10" (or reps only), and the reason for it.
+  const repsLine = target.reps.join(' · ');
+  const targetLine =
+    target.reason.kind === 'first_time' && target.reason.bodyweight
+      ? `${pe.repsMin}–${pe.repsMax}${NB}${unit}`
+      : target.reason.kind === 'first_time'
+      ? L({ en: 'Set 1 is a test · {{r}} {{u}}', fr: 'Série 1 = test · {{r}} {{u}}', tn: 'السيري 1 تجربة · {{r}} {{u}}', tnLatn: 'Série 1 test · {{r}} {{u}}' }, { r: pe.repsMin, u: unit })
+      : target.weightKg
+        ? `${kg(target.weightKg)}${NB}kg${NB}×${NB}${repsLine}`
+        : `${repsLine}${NB}${unit}`;
+  const reasonText = L(reasonCopy(target.reason, !!pe.timed), {
+    min: pe.repsMin,
+    max: pe.repsMax,
+    // The test weight leaves about 7 reps in the tank (lib/coach.ts reads Easy there as 6).
+    test: Math.max(15, pe.repsMin + 7),
+    kg: 'weightKg' in target.reason ? kg(target.reason.weightKg) : '',
+    from: 'from' in target.reason ? kg(target.reason.from) : '',
+    to: 'to' in target.reason ? kg(target.reason.to) : '',
+    days: target.reason.kind === 'comeback' ? target.reason.days : '',
+  });
+  const noteText = note
+    ? L(NOTE_COPY[note.change.kind], {
+        n: note.n,
+        kg: 'weightKg' in note.change ? kg(note.change.weightKg) : '',
+        reps: 'reps' in note.change ? note.change.reps : '',
+      })
+    : null;
 
   return (
     <ScrollView
@@ -342,7 +353,7 @@ const ExercisePage = memo(function ExercisePage({
           label={L({ en: 'Add set', fr: 'Ajouter une série', tn: 'زيد سيري', tnLatn: 'Zid série' })}
           variant="text"
           icon={(c) => <Plus size={18} color={c} strokeWidth={2.6} />}
-          onPress={() => onAdd(pe.exerciseId)}
+          onPress={() => onAdd(page)}
           style={{ marginTop: space.xs, marginLeft: -space.md }}
         />
 
@@ -362,12 +373,41 @@ const ExercisePage = memo(function ExercisePage({
           </Why>
         ) : null}
 
-        <View style={styles.hint}>
-          <TrendingUp size={18} color={t.accentText} style={{ marginTop: 1 }} />
-          <Txt variant="caption" tone="secondary" style={{ flex: 1 }}>
-            {hintText}
+        {noteText ? (
+          <View style={[styles.note, { backgroundColor: t.accentSoft }]} accessibilityLiveRegion="polite">
+            <Txt variant="label" color={t.accentText}>
+              {noteText}
+            </Txt>
+          </View>
+        ) : null}
+
+        <View style={[styles.target, { borderColor: t.hairline }]}>
+          <View style={styles.targetHead}>
+            <TrendingUp size={18} color={t.accentText} />
+            <Txt variant="overline" tone="secondary">
+              {L({ en: 'Today', fr: 'Aujourd’hui', tn: 'اليوم', tnLatn: 'Lyoum' })}
+            </Txt>
+          </View>
+          <Txt variant="numMedium" style={{ marginTop: space.xs }}>
+            {targetLine}
+          </Txt>
+          <Txt variant="caption" tone="secondary" style={{ marginTop: space.xs }}>
+            {reasonText}
           </Txt>
         </View>
+        <Why
+          title={L({ en: 'How hard should a set be?', fr: 'Une série doit être dure comment ?', tn: 'قدّاش لازم تكون السيري صعيبة؟', tnLatn: '9addech lazem tkoun série s3iba?' })}
+          style={{ marginTop: space.md }}
+        >
+          <Txt tone="secondary">
+            {L({
+              en: 'Stop each set with about 2 good reps left: that is “Good”. Only the last reps should be a fight. After each set, tell the app how it felt: Easy (4 or more reps left) raises the next sets, Hard (0–1 left, or you failed) lowers them. Next session starts from what you did today.',
+              fr: 'Arrête chaque série en gardant environ 2 bonnes répétitions en réserve : c’est « Bien ». Seules les dernières répétitions doivent être un combat. Après chaque série, dis à l’app comment c’était : Facile (4 répétitions ou plus en réserve) augmente les séries suivantes, Dur (0–1 en réserve, ou échec) les baisse. La prochaine séance part de ce que tu as fait aujourd’hui.',
+              tn: 'وقّف كل سيري وانت مازال تنجّم تعمل قريب 2 مرّات نظاف: هذا “مليح”. كان المرّات الأخرانين لازم يكونو صعاب. بعد كل سيري، قول للتطبيق كيفاش جاتك: ساهل (مازال تنجّم 4 ولا أكثر) يطلّع السيريات الجايين، صعيب (0–1 ولا ما كمّلتش) يهبّطهم. الحصّة الجاية تبدا من اللي عملتو اليوم.',
+              tnLatn: 'Wa99ef kol série w enti mazelt tnajjem ta3mel 9rib 2 reps ndhaf: hedha “Mli7”. Ken les reps le5ranin lazem ykounou s3ab. Ba3d kol série, 9oul lel app kifech jatek: Sehel (mazelt tnajjem 4 walla akther) ytalla3 les séries el jeyin, S3ib (0–1 walla ma kammaltech) yhabbathom. Séance el jeya tebda men eli 3maltou lyoum.',
+            })}
+          </Txt>
+        </Why>
         <Txt variant="caption" tone="tertiary" style={{ marginTop: space.lg }}>
           {L({
             en: 'Bodyweight exercise? Leave kg at 0. Stop a set if you feel sharp pain — effort burns, pain stabs.',
@@ -489,13 +529,68 @@ function UpNext({ next, onPress }: { next?: Page; onPress: () => void }) {
 function todaysExercise(planned: PlannedExercise, session: Pick<WorkoutSession, 'swaps'>, profile: Profile): PlannedExercise {
   const id = session.swaps?.[planned.exerciseId];
   if (!id || id === planned.exerciseId || !getExercise(id)) return planned;
-  return { ...planned, exerciseId: id, ...prescription(planned.slot as MovementSlot, id, profile) };
+  // Swapped for today only: off its calisthenics ladder too (it can't level the ladder up).
+  return { ...planned, ladder: undefined, exerciseId: id, ...prescription(planned.slot as MovementSlot, id, profile) };
 }
 
-/** Fresh sets for an exercise: its prescription, with last time's weight pre-filled. */
-function freshSets(pe: PlannedExercise, last: LoggedSet[], count: number): LoggedSet[] {
-  const hint = progressionHint(pe, last);
-  return Array.from({ length: count }, () => ({ exerciseId: pe.exerciseId, reps: pe.repsMin, weightKg: hint.weightKg ?? 0, done: false }));
+/** Sets for an exercise, filled with the coach's target. */
+function freshSets(pe: PlannedExercise, target: Target, count: number): LoggedSet[] {
+  return Array.from({ length: count }, (_, i) => ({
+    exerciseId: pe.exerciseId,
+    reps: target.reps[i] ?? target.reps[target.reps.length - 1] ?? pe.repsMin,
+    weightKg: target.weightKg,
+    done: false,
+  }));
+}
+
+/**
+ * Brings a session in line with the program (the ⓘ page can swap an exercise
+ * mid-workout): exercises it lacks get their sets, sets not done for exercises
+ * that left it go, done sets always stay. Sets attached to no exercise (left
+ * by the old Add set bug) are dropped. Returns the same object if nothing changes.
+ */
+function reconcile(
+  session: WorkoutSession,
+  day: WorkoutDay,
+  profile: Profile,
+  setsFor: (pe: PlannedExercise) => LoggedSet[],
+): WorkoutSession {
+  const todays = day.exercises.map((planned) => todaysExercise(planned, session, profile));
+  const ids = new Set(todays.map((pe) => pe.exerciseId));
+  const kept = session.sets.filter((x) => x.exerciseId && (x.done || ids.has(x.exerciseId)));
+  const missing = todays.filter((pe) => !kept.some((x) => x.exerciseId === pe.exerciseId));
+  if (kept.length === session.sets.length && !missing.length) return session;
+  return { ...session, sets: [...kept, ...missing.flatMap(setsFor)] };
+}
+
+/** One tap after a set: how it felt. Shown in the dock until answered or the next set is logged. */
+function EffortRow({ n, onRate }: { n: number; onRate: (effort: Effort) => void }) {
+  const t = useTokens();
+  const { L } = useLanguage();
+  return (
+    <View style={styles.effort}>
+      <Txt variant="overline" tone="secondary" numberOfLines={1}>
+        {L({ en: 'How was set {{n}}?', fr: 'Série {{n}}, c’était comment ?', tn: 'كيفاش جاتك السيري {{n}}؟', tnLatn: 'Kifech jatek série {{n}}?' }, { n })}
+      </Txt>
+      <View style={styles.effortButtons}>
+        {(['easy', 'good', 'hard'] as const).map((e) => (
+          <Tap
+            key={e}
+            onPress={() => onRate(e)}
+            haptic="selection"
+            pressScale={0.95}
+            accessibilityLabel={`${L(EFFORT_NAMES[e])}: ${L(EFFORT_HELP[e])}`}
+            pressedStyle={{ backgroundColor: t.pressed }}
+            style={[styles.effortButton, { backgroundColor: t.surfaceHigh }]}
+          >
+            <Txt variant="label" numberOfLines={1}>
+              {L(EFFORT_NAMES[e])}
+            </Txt>
+          </Tap>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -511,59 +606,49 @@ export default function WorkoutScreen() {
   const reduce = useReducedMotion();
   const fmt = useFormat();
   const { L, language } = useLanguage();
-  const { workoutPlan, setWorkoutPlan, profile, sessions, saveSession, deleteSession, today } = useAppData();
-  const { dayId } = useLocalSearchParams<{ dayId: string }>();
+  const { workoutPlan, setWorkoutPlan, profile, sessions, saveSession, deleteSession, today, settings, updateSettings } = useAppData();
+  const { dayId, light } = useLocalSearchParams<{ dayId: string; light?: string }>();
   const day = workoutPlan?.days.find((d) => d.id === dayId);
-  // Ramadan mode: one set fewer per exercise on a fasting day (never below 2).
+  // Ramadan mode on a fasting day, or "tired today" from the Train tab: a lighter session.
   const [ramadan] = useRamadanSettings();
-  const lighter = ramadan.lighter && isFastingDay(ramadan, today);
+  const lighter = (ramadan.lighter && isFastingDay(ramadan, today)) || light === '1';
 
-  // Last completed sets per exercise, for targets and pre-filled weights.
-  const lastSets = useMemo(() => {
-    const map = new Map<string, LoggedSet[]>();
-    const finished = sessions
-      .filter((s) => s.finishedAt)
-      .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-    for (const s of finished) {
-      for (const set of s.sets) {
-        if (!set.done || map.has(set.exerciseId + '#done')) continue;
-        const list = map.get(set.exerciseId) ?? [];
-        list.push(set);
-        map.set(set.exerciseId, list);
+  // Each exercise's past sessions, newest first (this unfinished one never counts).
+  const historyOf = useMemo(() => {
+    const cache = new Map<string, PastSession[]>();
+    return (id: string) => {
+      let h = cache.get(id);
+      if (!h) {
+        h = historyFor(id, sessions);
+        cache.set(id, h);
       }
-      // Only keep the most recent session for each exercise.
-      for (const id of new Set(s.sets.map((x) => x.exerciseId))) map.set(id + '#done', []);
-    }
-    return map;
+      return h;
+    };
   }, [sessions]);
+  // Lighter (Ramadan fasting day, or "tired today"): one set fewer, never below 2.
+  const count = (pe: PlannedExercise) => (lighter && pe.sets > 2 ? pe.sets - 1 : pe.sets);
+  const targetOf = (pe: PlannedExercise, n: number) => targetFor(pe, n, historyOf(pe.exerciseId), { today, steps: settings.kgSteps });
+  const setsFor = (pe: PlannedExercise) => freshSets(pe, targetOf(pe, count(pe)), count(pe));
 
   const [session, setSession] = useState<WorkoutSession | null>(() => {
     if (!day) return null;
-    const count = (pe: PlannedExercise) => (lighter ? Math.max(2, Math.min(pe.sets, pe.sets - 1)) : pe.sets);
     const unfinished = sessions.find((s) => s.dayId === day.id && !s.finishedAt && s.date === today);
-    if (unfinished) {
-      // The program may have been rebuilt or swapped since this session started:
-      // exercises it now has get their sets; logged sets are always kept.
-      if (!profile) return unfinished;
-      const missing = day.exercises
-        .map((planned) => todaysExercise(planned, unfinished, profile))
-        .filter((pe) => !unfinished.sets.some((x) => x.exerciseId === pe.exerciseId));
-      if (!missing.length) return unfinished;
-      return {
-        ...unfinished,
-        sets: [...unfinished.sets, ...missing.flatMap((pe) => freshSets(pe, lastSets.get(pe.exerciseId) ?? [], count(pe)))],
-      };
-    }
-    const sets: LoggedSet[] = day.exercises.flatMap((pe) => freshSets(pe, lastSets.get(pe.exerciseId) ?? [], count(pe)));
+    if (unfinished) return profile ? reconcile(unfinished, day, profile, setsFor) : unfinished;
     return {
       id: newId(),
       date: today,
       dayId: day.id,
       dayName: day.name,
       startedAt: new Date().toISOString(),
-      sets,
+      sets: day.exercises.flatMap(setsFor),
     };
   });
+
+  // The program changed while this screen was open (a swap from the ⓘ page): every exercise keeps its sets.
+  useEffect(() => {
+    if (day && profile) setSession((s) => (s ? reconcile(s, day, profile, setsFor) : s));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, profile]);
 
   // Persist progress so leaving the screen doesn't lose the workout.
   useEffect(() => {
@@ -634,8 +719,60 @@ export default function WorkoutScreen() {
     };
   }, []);
 
+  // The phone's notification for this workout: the rest countdown while resting, else the next set.
+  const ns = notificationSettings(settings.notifications);
+  /** "Leg Press, set 2: 30 kg × 10" for the first set still to do, skipping `skip` (the one just logged). */
+  const upNext = (skip?: number) => {
+    const start = Math.max(0, pages.findIndex((p) => p.rows.some(({ i }) => i === skip)));
+    for (const p of [...pages.slice(start), ...pages.slice(0, start)]) {
+      const n = p.rows.findIndex(({ s, i }) => !s.done && i !== skip);
+      if (n < 0) continue;
+      const s = p.rows[n].s;
+      const unitText = p.pe.timed ? 's' : L({ en: 'reps', fr: 'rép.', tn: 'مرّات', tnLatn: 'reps' });
+      return L(
+        { en: 'Next: {{name}}, set {{n}} · {{what}}', fr: 'Ensuite : {{name}}, série {{n}} · {{what}}', tn: 'اللي بعدو: {{name}}، سيري {{n}} · {{what}}', tnLatn: 'Eli ba3dou: {{name}}, série {{n}} · {{what}}' },
+        { name: exerciseName(p.ex, language), n: n + 1, what: s.weightKg ? `${fmt(s.weightKg, Number.isInteger(s.weightKg) ? 0 : 1)} kg × ${s.reps}` : `${s.reps} ${unitText}` },
+      );
+    }
+    return L({ en: 'Last set done: finish and save your workout.', fr: 'Dernière série faite : termine et enregistre ta séance.', tn: 'آخر سيري تعملت: كمّل وسجّل الحصّة.', tnLatn: 'E5er série t3malet: kammel w sajjel séance.' });
+  };
+  const restTitle = day ? L({ en: 'Rest · {{day}}', fr: 'Repos · {{day}}', tn: 'راحة · {{day}}', tnLatn: 'Repos · {{day}}' }, { day: L(day.name) }) : '';
+  const restOverTitle = L({ en: 'Rest over: go!', fr: 'Repos fini : c’est reparti !', tn: 'الراحة وفات: هيّا!', tnLatn: 'El repos wfé: hayya!' });
+  /** Countdown on the lock screen and the buzz at its end. */
+  const announceRest = (endAt: number, skip?: number) => {
+    if (!ns.rest) return;
+    const next = upNext(skip);
+    liveRest(endAt, restTitle, next);
+    scheduleRestOver(endAt, restOverTitle, next).catch(() => undefined);
+  };
+  const doneNow = session?.sets.filter((s) => s.done).length ?? 0;
+  const totalNow = session?.sets.length ?? 0;
+  useEffect(() => {
+    if (!day || restEnd) return;
+    if (!ns.ongoing) {
+      liveClear();
+      return;
+    }
+    liveSession(
+      L({ en: '{{day}} · {{done}}/{{total}} sets', fr: '{{day}} · {{done}}/{{total}} séries', tn: '{{day}} · {{done}}/{{total}} سيريات', tnLatn: '{{day}} · {{done}}/{{total}} séries' }, { day: L(day.name), done: doneNow, total: totalNow }),
+      upNext(),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, restEnd, ns.ongoing, doneNow, totalNow, language]);
+  // Leaving the workout (saved or not) takes its notification and pending alert with it.
+  useEffect(
+    () => () => {
+      liveClear();
+      cancelRestOver();
+    },
+    [],
+  );
+
   const [finishOpen, setFinishOpen] = useState(false);
   const [swapPage, setSwapPage] = useState<Page | null>(null);
+  // The set just logged, waiting for "how was it?", and what rated sets changed per exercise.
+  const [rating, setRating] = useState<number | null>(null);
+  const [notes, setNotes] = useState<Record<string, Note>>({});
 
   if (!day || !session || !pages.length) {
     return (
@@ -654,24 +791,19 @@ export default function WorkoutScreen() {
     );
   }
 
-  const updateSet = (globalIndex: number, patch: Partial<LoggedSet>) =>
+  const patchSet = (globalIndex: number, patch: Partial<LoggedSet>) =>
+    setSession((s) => (s ? { ...s, sets: s.sets.map((x, i) => (i === globalIndex ? { ...x, ...patch } : x)) } : s));
+
+  /** Typing in a set fills the sets below it that aren't done and weren't typed in. */
+  const editSet = (globalIndex: number, patch: Pick<Partial<LoggedSet>, 'weightKg' | 'reps'>) =>
     setSession((s) => {
       if (!s) return s;
-      const target = s.sets[globalIndex];
+      const id = s.sets[globalIndex].exerciseId;
       return {
         ...s,
         sets: s.sets.map((x, i) => {
-          if (i === globalIndex) return { ...x, ...patch };
-          // A new weight carries over to the remaining, not-yet-done sets.
-          if (
-            patch.weightKg !== undefined &&
-            i > globalIndex &&
-            x.exerciseId === target.exerciseId &&
-            !x.done &&
-            x.weightKg === target.weightKg
-          ) {
-            return { ...x, weightKg: patch.weightKg };
-          }
+          if (i === globalIndex) return { ...x, ...patch, manual: true };
+          if (i > globalIndex && x.exerciseId === id && !x.done && !x.manual) return { ...x, ...patch };
           return x;
         }),
       };
@@ -679,23 +811,63 @@ export default function WorkoutScreen() {
 
   const toggleDone = (globalIndex: number, restSec: number) => {
     const set = session.sets[globalIndex];
-    updateSet(globalIndex, { done: !set.done });
+    patchSet(globalIndex, set.done ? { done: false, effort: undefined } : { done: true });
     if (!set.done) {
       // StampCheck gives a success haptic with its stamp; without motion it doesn't.
       if (reduce) hapticTap('light');
-      setRestEnd(Date.now() + restSec * 1000);
+      const endAt = Date.now() + restSec * 1000;
+      setRestEnd(endAt);
       setRestTotal(restSec);
       setNow(Date.now());
+      setRating(globalIndex);
+      if (restSec > 0) announceRest(endAt, globalIndex);
+    } else if (rating === globalIndex) {
+      setRating(null);
     }
   };
 
-  const addSet = (exerciseId: string) =>
+  /** Records how a set felt, and moves the sets still to come up or down when it calls for it. */
+  const rate = (effort: Effort) => {
+    if (rating === null) return;
+    const globalIndex = rating;
+    setRating(null);
+    const set = { ...session.sets[globalIndex], effort };
+    const ratedPage = pages.find((p) => p.rows.some(({ i }) => i === globalIndex));
+    if (!ratedPage) {
+      patchSet(globalIndex, { effort });
+      return;
+    }
+    const n = ratedPage.rows.findIndex(({ i }) => i === globalIndex);
+    const target = targetOf(ratedPage.pe, ratedPage.rows.length);
+    const change = afterRatedSet(ratedPage.pe, set, target.reps[n] ?? ratedPage.pe.repsMin, target.step, !target.last);
+    const follows = (x: LoggedSet, i: number) => !!change && i > globalIndex && x.exerciseId === set.exerciseId && !x.done && !x.manual;
+    setSession((s) =>
+      s
+        ? {
+            ...s,
+            sets: s.sets.map((x, i) => {
+              if (i === globalIndex) return { ...x, effort };
+              if (!change || !follows(x, i)) return x;
+              if (change.kind === 'calibrated') return { ...x, weightKg: change.weightKg, reps: change.reps };
+              if (change.kind === 'more_reps') return { ...x, reps: change.reps };
+              return { ...x, weightKg: change.weightKg };
+            }),
+          }
+        : s,
+    );
+    if (change && session.sets.some(follows)) setNotes((prev) => ({ ...prev, [set.exerciseId]: { n: n + 1, change } }));
+  };
+
+  const addSet = (page: Page) =>
     setSession((s) => {
       if (!s) return s;
-      const lastIdx = s.sets.map((x) => x.exerciseId).lastIndexOf(exerciseId);
-      const template = s.sets[lastIdx];
+      const id = page.pe.exerciseId;
+      const at = s.sets.map((x) => x.exerciseId).lastIndexOf(id);
+      // No set for it at all: start from today's target.
+      if (at < 0) return { ...s, sets: [...s.sets, ...freshSets(page.pe, targetOf(page.pe, 1), 1)] };
+      const { reps, weightKg } = s.sets[at];
       const sets = [...s.sets];
-      sets.splice(lastIdx + 1, 0, { ...template, done: false });
+      sets.splice(at + 1, 0, { exerciseId: id, reps, weightKg, done: false });
       return { ...s, sets };
     });
 
@@ -708,28 +880,32 @@ export default function WorkoutScreen() {
     const oldId = page.pe.exerciseId;
     const next: PlannedExercise = {
       ...page.pe,
+      ladder: undefined,
       exerciseId: newExerciseId,
       ...prescription(page.pe.slot as MovementSlot, newExerciseId, profile),
     };
-    const hint = progressionHint(next, lastSets.get(newExerciseId) ?? []);
+    const left = page.rows.filter(({ s }) => !s.done).length;
+    const target = targetOf(next, left || count(next));
     setSession((s) => {
       if (!s) return s;
       let moved = 0;
       let sets = s.sets.map((x) => {
         if (x.exerciseId !== oldId || x.done) return x;
+        const reps = target.reps[moved] ?? next.repsMin;
         moved++;
-        return { ...x, exerciseId: newExerciseId, reps: next.repsMin, weightKg: hint.weightKg ?? 0 };
+        return { exerciseId: newExerciseId, reps, weightKg: target.weightKg, done: false };
       });
       // Every set was already done: the new exercise starts with its own sets after them.
       if (!moved) {
         const at = sets.map((x) => x.exerciseId).lastIndexOf(oldId) + 1;
-        sets = [...sets.slice(0, at), ...freshSets(next, lastSets.get(newExerciseId) ?? [], next.sets), ...sets.slice(at)];
+        sets = [...sets.slice(0, at), ...freshSets(next, target, count(next)), ...sets.slice(at)];
       }
       const swaps = { ...s.swaps };
       if (inProgram) delete swaps[page.planId];
       else swaps[page.planId] = newExerciseId;
       return { ...s, sets, swaps };
     });
+    setNotes(({ [oldId]: _, ...rest }) => rest);
     if (inProgram) setWorkoutPlan(swapInPlan(workoutPlan, day.id, page.planIndex, newExerciseId, profile));
     setSwapPage(null);
     snackbar.show(
@@ -764,11 +940,26 @@ export default function WorkoutScreen() {
     const finished = { ...session, finishedAt: new Date().toISOString(), sets: session.sets };
     saveSession(finished);
     setFinishOpen(false);
+    // Calisthenics: a step done at the top of its range on every set moves its ladder up.
+    const ups = profile
+      ? levelUps(
+          pages.map((p) => ({ ladder: p.pe.ladder, sets: p.rows.map(({ s }) => s), repsMax: p.pe.repsMax })),
+          settings.ladderSteps,
+          profile,
+        )
+      : [];
+    if (ups.length) updateSettings({ ladderSteps: { ...settings.ladderSteps, ...Object.fromEntries(ups.map((u) => [u.ladder, u.index])) } });
+    const upName = ups[0] ? getExercise(ups[0].id) : undefined;
     snackbar.show(
-      L(
-        { en: 'Workout saved · {{n}} sets', fr: 'Séance enregistrée · {{n}} séries', tn: 'الحصّة تسجّلت · {{n}} سيريات', tnLatn: 'Séance tsajjlet · {{n}} séries' },
-        { n: doneCount },
-      ),
+      upName
+        ? L(
+            { en: 'Saved · Level up: {{name}} next time', fr: 'Enregistrée · Niveau suivant : {{name}} la prochaine fois', tn: 'تسجّلت · طلعت درجة: {{name}} المرّة الجاية', tnLatn: 'Tsajjlet · Tla3t daraja: {{name}} l marra el jeya' },
+            { name: exerciseName(upName, language) },
+          )
+        : L(
+            { en: 'Workout saved · {{n}} sets', fr: 'Séance enregistrée · {{n}} séries', tn: 'الحصّة تسجّلت · {{n}} سيريات', tnLatn: 'Séance tsajjlet · {{n}} séries' },
+            { n: doneCount },
+          ),
       {
         label: L({ en: 'Add cardio', fr: 'Ajouter du cardio', tn: 'زيد كارديو', tnLatn: 'Zid cardio' }),
         onPress: () => router.push('/cardio'),
@@ -813,7 +1004,8 @@ export default function WorkoutScreen() {
             icon: undefined,
           };
 
-  const DOCK = 56 + space.sm + 64 + space.md * 2;
+  const ratingRow = rating !== null ? pages.flatMap((p) => p.rows.map(({ i }, n) => (i === rating ? n + 1 : 0))).find(Boolean) : undefined;
+  const DOCK = 56 + space.sm + 64 + space.md * 2 + (ratingRow ? EFFORT_HEIGHT : 0);
   const bottomSpace = DOCK + insets.bottom + space.xl;
 
   return (
@@ -893,10 +1085,10 @@ export default function WorkoutScreen() {
             page={item}
             width={width}
             bottomSpace={bottomSpace}
-            hint={progressionHint(item.pe, lastSets.get(item.pe.exerciseId) ?? [])}
-            last={lastSets.get(item.pe.exerciseId) ?? []}
+            target={targetOf(item.pe, item.rows.length)}
+            note={notes[item.pe.exerciseId]}
             showWarmup={i === 0 && doneCount === 0}
-            onUpdate={updateSet}
+            onUpdate={editSet}
             onToggle={toggleDone}
             onAdd={addSet}
             onForm={(id) => router.push({ pathname: '/exercise/[id]', params: { id, day: day.id, index: String(item.planIndex) } })}
@@ -913,21 +1105,27 @@ export default function WorkoutScreen() {
           slot={swapPage.pe.slot}
           exclude={pages.filter((p) => p.planIndex !== swapPage.planIndex).map((p) => p.pe.exerciseId)}
           canKeepInSession
+          ladder={swapPage.pe.ladder}
           onPick={(id, inProgram) => swapExercise(swapPage, id, inProgram)}
         />
       ) : null}
 
       {!keyboard ? (
         <View style={[styles.dock, { paddingBottom: insets.bottom + space.md, backgroundColor: t.ground, borderTopColor: t.hairline }]}>
+          {ratingRow ? <EffortRow n={ratingRow} onRate={rate} /> : null}
           {restEnd ? (
             <RestStrip
               left={restLeft}
               fraction={restFraction}
               onAdd={() => {
+                if (restEnd) announceRest(restEnd + 30000);
                 setRestEnd((e) => (e ? e + 30000 : e));
                 setRestTotal((s) => s + 30);
               }}
-              onSkip={() => setRestEnd(null)}
+              onSkip={() => {
+                cancelRestOver();
+                setRestEnd(null);
+              }}
             />
           ) : (
             <UpNext next={pages[index + 1]} onPress={() => goTo(index + 1)} />
@@ -1042,7 +1240,12 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   numUnit: { flexShrink: 1 },
-  hint: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, marginTop: space.lg },
+  note: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.sm, marginTop: space.md },
+  target: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: space.md, marginTop: space.lg },
+  targetHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  effort: { height: EFFORT_HEIGHT - space.sm, justifyContent: 'space-between', marginBottom: space.sm },
+  effortButtons: { flexDirection: 'row', gap: space.sm },
+  effortButton: { flex: 1, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   dock: {
     position: 'absolute',
     left: 0,

@@ -5,6 +5,7 @@ import type { Slug } from 'react-native-body-highlighter';
 import type { LocalizedText } from '@/types';
 import exercisesData from '@/data/exercises.json';
 import { exerciseExtras } from '@/data/exerciseCuration';
+import { customExercises } from '@/data/customExercises';
 import type { Language } from '@/lib/i18n';
 
 export type Muscle =
@@ -40,7 +41,8 @@ export interface Exercise {
   images: string[];
 }
 
-export const exercises = exercisesData as Exercise[];
+/** The dataset plus the calisthenics steps it lacks (data/customExercises.ts). */
+export const exercises = [...(exercisesData as Exercise[]), ...customExercises];
 const byId = new Map(exercises.map((e) => [e.id, e]));
 
 const IMAGE_BASE =

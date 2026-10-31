@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Exact "rest over" alerts while the phone sleeps (the user allows it in Alarms & reminders). -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+  <!-- Android 16: the rest countdown as a Live Update (status bar chip, Samsung Now Bar). -->
+  <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+</manifest>

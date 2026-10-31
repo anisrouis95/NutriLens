@@ -133,6 +133,8 @@ export interface PlannedExercise {
   timed?: boolean; // reps are seconds
   restSec: number;
   alternatives: string[];
+  /** Calisthenics: the ladder this exercise is a step of (lib/ladders.ts). */
+  ladder?: string;
 }
 
 export interface WorkoutDay {
@@ -151,13 +153,21 @@ export interface WorkoutPlan {
   daysPerWeek: number;
   days: WorkoutDay[];
   cardio: LocalizedText;
+  /** The training style its ladder slots were set for (lib/ladders.ts); missing = weights. */
+  style?: TrainingStyle;
 }
+
+/** How a set felt: Easy = 4+ reps left, Good = 1–3, Hard = 0–1 or failed. */
+export type Effort = 'easy' | 'good' | 'hard';
 
 export interface LoggedSet {
   exerciseId: string;
   reps: number;
   weightKg: number;
   done: boolean;
+  /** Typed in by hand: later changes to the sets above never overwrite it. */
+  manual?: boolean;
+  effort?: Effort;
 }
 
 export interface WorkoutSession {
@@ -228,4 +238,44 @@ export interface AppSettings {
   fileBackupAt?: string;
   /** Ramadan mode (fasting days, prayer times, lighter sessions). */
   ramadan?: RamadanSettings;
+  /** Training days; missing = derived from the number of sessions a week. */
+  schedule?: TrainingSchedule;
+  /** Reminders and the rest timer; missing = the defaults in lib/notifications. */
+  notifications?: NotificationSettings;
+  /** Weight step per exercise, when its machine moves differently from the default. */
+  kgSteps?: Record<string, number>;
+  /** Weights, calisthenics ladders, or both. Missing = weights. */
+  style?: TrainingStyle;
+  /** Current step on each calisthenics ladder. */
+  ladderSteps?: Record<string, number>;
+  /** The Train tab's "turn on notifications" card was answered. */
+  askedNotifications?: boolean;
 }
+
+export interface TrainingSchedule {
+  /** Usual training days, 0 = Sunday … 6 = Saturday. */
+  weekdays: number[];
+  /** Days trained some weeks only: no reminder, never counted as missed. */
+  optional: number[];
+  /** One date made a training or a rest day (this week's changes). */
+  overrides: Record<string, 'train' | 'rest'>;
+}
+
+export interface NotificationSettings {
+  /** Rest countdown on the lock screen and the "rest over" alert. */
+  rest: boolean;
+  /** Silent notification showing the workout in progress. */
+  ongoing: boolean;
+  training: boolean;
+  /** HH:MM */
+  trainingTime: string;
+  weighIn: boolean;
+  /** 0 = Sunday … 6 = Saturday */
+  weighInDay: number;
+  weighInTime: string;
+  meals: boolean;
+  mealTimes: { breakfast: string; lunch: string; dinner: string };
+  ramadan: boolean;
+}
+
+export type TrainingStyle = 'weights' | 'mixed' | 'calisthenics';

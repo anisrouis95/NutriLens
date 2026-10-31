@@ -34,6 +34,7 @@ import {
   toDateKey,
 } from '@/lib/nutritionMath';
 import { dayNameFor, withCurrentNames } from '@/lib/workoutGenerator';
+import { applyStyle, withLadderSteps } from '@/lib/ladders';
 
 /**
  * Everything worth keeping, as one JSON document (backup files, cloud backup).
@@ -151,7 +152,14 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setWeights(w);
       // Plans and sessions saved before Darija existed get its names from the templates.
       setWorkoutPlanState(wp ? withCurrentNames(wp, p) : wp);
-      setSessions(s.map((x) => (x.dayName.tn ? x : { ...x, dayName: dayNameFor(x.dayId, x.dayName) })));
+      setSessions(
+        s.map((x) => ({
+          ...x,
+          dayName: x.dayName.tn ? x.dayName : dayNameFor(x.dayId, x.dayName),
+          // Before 1.2.0, Add set on an exercise without sets saved a set attached to none.
+          sets: x.sets.filter((set) => set.exerciseId),
+        })),
+      );
       setCardio(c);
       setHealth(h);
       setSettings({ ...DEFAULT_SETTINGS, ...st });
@@ -197,6 +205,18 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       today,
     );
   }, [profile, foods, weights, today, measuredSteps]);
+
+  // Calisthenics: the style decides which slots are ladders (stored with the program),
+  // and each ladder's current step fills its slots wherever the program is read.
+  const style = settings.style ?? 'weights';
+  useEffect(() => {
+    if (!ready || !profile || !workoutPlan) return;
+    if ((workoutPlan.style ?? 'weights') !== style) setWorkoutPlanState(applyStyle(workoutPlan, profile, style));
+  }, [ready, profile, workoutPlan, style]);
+  const styledPlan = useMemo(
+    () => (workoutPlan && profile ? withLadderSteps(workoutPlan, profile, settings.ladderSteps) : workoutPlan),
+    [workoutPlan, profile, settings.ladderSteps],
+  );
 
   const plan = useMemo(() => {
     if (!profile) return null;
@@ -364,7 +384,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     weights,
     logWeight,
     deleteWeight,
-    workoutPlan,
+    workoutPlan: styledPlan,
     setWorkoutPlan,
     sessions,
     saveSession,

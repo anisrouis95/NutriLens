@@ -194,7 +194,8 @@ function chooseSplit(profile: Profile): SplitDef {
   };
 }
 
-function availableCandidates(slot: MovementSlot, profile: Profile): string[] {
+/** The slot's exercises for the user's equipment, minus those that load a painful joint (best first). */
+export function availableCandidates(slot: MovementSlot, profile: Profile): string[] {
   const list = slotCandidates[slot]?.[profile.equipment] ?? [];
   return list.filter((id) => {
     if (!getExercise(id)) return false;
@@ -252,7 +253,8 @@ function focusOf(exercises: PlannedExercise[]): string[] {
 
 /**
  * Replaces one exercise of the program with another for the same slot: new
- * sets, reps and rest for it, the old one first among the alternatives.
+ * sets, reps and rest for it, the old one first among the alternatives. A
+ * hand-picked exercise leaves its calisthenics ladder (lib/ladders.ts).
  */
 export function swapInPlan(plan: WorkoutPlan, dayId: string, index: number, newId: string, profile: Profile): WorkoutPlan {
   return {
@@ -264,6 +266,7 @@ export function swapInPlan(plan: WorkoutPlan, dayId: string, index: number, newI
           ? e
           : {
               ...e,
+              ladder: undefined,
               exerciseId: newId,
               ...prescription(e.slot as MovementSlot, newId, profile),
               alternatives: [e.exerciseId, ...e.alternatives.filter((a) => a !== newId)].slice(0, 3),
@@ -349,24 +352,6 @@ function cardioAdvice(profile: Profile): LocalizedText {
     tn: 'حاول توصل لـ 150 min نشاط متوسّط في الجمعة (مثلا 5 × 30 min مشي بالزربة) زيادة على حصص القوّة متاعك.',
     tnLatn: '7awel tousel l 150 min activité modérée fel jem3a (exemple 5 × 30 min mechi bel zerba) zeyda 3la les séances muscu mte3ek.',
   };
-}
-
-/**
- * Double progression: once every set reaches the top of the rep range,
- * suggest adding weight; otherwise aim for one more rep.
- */
-export function progressionHint(
-  planned: PlannedExercise,
-  lastSets: { reps: number; weightKg: number }[],
-): { kind: 'add_weight' | 'add_reps' | 'first_time'; weightKg?: number } {
-  if (!lastSets.length) return { kind: 'first_time' };
-  const allTop = lastSets.length >= planned.sets && lastSets.every((s) => s.reps >= planned.repsMax);
-  const heaviest = Math.max(...lastSets.map((s) => s.weightKg));
-  if (allTop && !planned.timed) {
-    const step = heaviest >= 40 ? 2.5 : heaviest > 0 ? 1 : 0;
-    return { kind: 'add_weight', weightKg: heaviest + step };
-  }
-  return { kind: 'add_reps', weightKg: heaviest };
 }
 
 /**

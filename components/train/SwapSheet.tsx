@@ -1,16 +1,19 @@
 // The swap list: replacements for one exercise, same movement first, then
 // exercises for the same muscles, never one that loads a painful joint the
 // user named in the questionnaire. In a session it can also change the program.
+// A calisthenics step also offers the easier and harder steps of its ladder,
+// which move the ladder itself (every session follows).
 
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { ArrowLeftRight, TriangleAlert } from 'lucide-react-native';
+import { ArrowDown, ArrowLeftRight, ArrowUp, TriangleAlert } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAppData } from '@/contexts/AppDataContext';
-import { Divider, Sheet, Tap, Toggle, Txt } from '@/components/ds';
+import { Divider, Sheet, Tap, Toggle, Txt, useSnackbar } from '@/components/ds';
 import { ExerciseThumb } from '@/components/exercise/ExerciseAnimation';
 import { exerciseImageUrls, exerciseName, getExercise, MUSCLE_NAMES, type Muscle } from '@/lib/exercises';
 import { LIMITATION_NAMES, swapOptions } from '@/lib/swap';
+import { LADDERS, nextStep, previousStep, stepAt, type LadderId } from '@/lib/ladders';
 import { radius, space, useTokens } from '@/theme';
 import type { LocalizedText } from '@/lib/i18n';
 
@@ -43,6 +46,16 @@ const T = {
   },
   sameMove: { en: 'Same movement', fr: 'Même mouvement', tn: 'نفس الحركة', tnLatn: 'Nafs el 7arka' },
   sameMuscles: { en: 'Same muscles', fr: 'Mêmes muscles', tn: 'نفس العضلات', tnLatn: 'Nafs les muscles' },
+  ladder: { en: 'Your {{name}} ladder', fr: 'Ton échelle {{name}}', tn: 'السلّوم متاع {{name}}', tnLatn: 'Es-sellom mta3 {{name}}' },
+  easier: { en: 'Easier step', fr: 'Étape plus facile', tn: 'درجة أسهل', tnLatn: 'Daraja as7al' },
+  harder: { en: 'Harder step', fr: 'Étape plus dure', tn: 'درجة أصعب', tnLatn: 'Daraja as3ab' },
+  ladderHint: {
+    en: 'Moves the ladder for every session.',
+    fr: 'Change l’échelle pour toutes les séances.',
+    tn: 'يبدّل السلّوم في الحصص الكل.',
+    tnLatn: 'Ybaddel es-sellom fel séances lkol.',
+  },
+  moved: { en: 'Ladder moved: {{name}}', fr: 'Échelle changée : {{name}}', tn: 'السلّوم تبدّل: {{name}}', tnLatn: 'Es-sellom tbaddel: {{name}}' },
   none: {
     en: 'No safe replacement with your equipment. Ask the coach, or skip this exercise today.',
     fr: 'Aucun remplacement sûr avec ton matériel. Demande au coach, ou saute cet exercice aujourd’hui.',
@@ -59,6 +72,7 @@ export default function SwapSheet({
   exclude,
   canKeepInSession,
   onPick,
+  ladder,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -69,11 +83,14 @@ export default function SwapSheet({
   /** In a running session: offer "only today" as well as "change my program". */
   canKeepInSession?: boolean;
   onPick: (newId: string, inProgram: boolean) => void;
+  /** The calisthenics ladder this exercise is a step of (PlannedExercise.ladder). */
+  ladder?: string;
 }) {
   const t = useTokens();
   const { height } = useWindowDimensions();
   const { L, language } = useLanguage();
-  const { profile } = useAppData();
+  const { profile, settings, updateSettings } = useAppData();
+  const snackbar = useSnackbar();
   const [inProgram, setInProgram] = useState(true);
 
   const result = useMemo(
@@ -84,6 +101,23 @@ export default function SwapSheet({
   if (!profile || !result || !current) return null;
 
   // Mid-sentence, so lower case ("your knees"); Arabic has no case.
+  // Neighbouring steps of the ladder, easier first.
+  const ladderId = ladder && ladder in LADDERS ? (ladder as LadderId) : null;
+  const at = ladderId ? stepAt(ladderId, settings.ladderSteps?.[ladderId] ?? 0, profile) : null;
+  const neighbours = ladderId && at
+    ? [
+        { kind: 'easier' as const, s: previousStep(ladderId, at.index, profile) },
+        { kind: 'harder' as const, s: nextStep(ladderId, at.index, profile) },
+      ].filter((n) => n.s && getExercise(n.s.step.id))
+    : [];
+  const moveLadder = (index: number, id: string) => {
+    if (!ladderId) return;
+    updateSettings({ ladderSteps: { ...settings.ladderSteps, [ladderId]: index } });
+    onClose();
+    const ex = getExercise(id);
+    if (ex) snackbar.show(L(T.moved, { name: exerciseName(ex, language) }));
+  };
+
   const parts = (list: string[]) => list.map((l) => L(LIMITATION_NAMES[l as keyof typeof LIMITATION_NAMES])).join(', ').toLowerCase();
   const muscles = (ids: string[]) => ids.map((m) => L(MUSCLE_NAMES[m as Muscle])).join(', ');
 
@@ -114,6 +148,43 @@ export default function SwapSheet({
       ) : null}
 
       <ScrollView style={{ maxHeight: height * 0.5, marginTop: space.md }} contentContainerStyle={{ paddingBottom: space.sm }}>
+        {ladderId && neighbours.length ? (
+          <View style={{ marginBottom: space.lg }}>
+            <Txt variant="overline" tone="tertiary" style={{ marginBottom: space.xs }}>
+              {L(T.ladder, { name: L(LADDERS[ladderId].name).toLowerCase() })}
+            </Txt>
+            {neighbours.map(({ kind, s }, n) => {
+              const ex = s && getExercise(s.step.id);
+              if (!s || !ex) return null;
+              return (
+                <View key={kind}>
+                  {n > 0 ? <Divider inset={56 + space.md} /> : null}
+                  <Tap
+                    onPress={() => moveLadder(s.index, s.step.id)}
+                    pressScale={0.99}
+                    pressedStyle={{ backgroundColor: t.pressed }}
+                    style={styles.row}
+                    accessibilityLabel={`${L(T[kind])}: ${exerciseName(ex, language)}`}
+                  >
+                    <ExerciseThumb uri={exerciseImageUrls(ex)[0]} size={56} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Txt variant="bodyStrong" numberOfLines={2}>
+                        {exerciseName(ex, language)}
+                      </Txt>
+                      <Txt variant="caption" tone="secondary" numberOfLines={1} style={{ marginTop: 2 }}>
+                        {`${L(T[kind])} · ${s.step.reps[0]}–${s.step.reps[1]}${s.step.timed ? ' s' : ''}`}
+                      </Txt>
+                    </View>
+                    {kind === 'harder' ? <ArrowUp size={20} color={t.accentText} /> : <ArrowDown size={20} color={t.textSecondary} />}
+                  </Tap>
+                </View>
+              );
+            })}
+            <Txt variant="caption" tone="tertiary" style={{ marginTop: space.xs }}>
+              {L(T.ladderHint)}
+            </Txt>
+          </View>
+        ) : null}
         {result.options.length ? (
           result.options.map((o, n) => {
             const ex = getExercise(o.id);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ListChecks, MoonStar, RefreshCw, Settings } from 'lucide-react-native';
+import { BellRing, CalendarDays, ListChecks, MoonStar, RefreshCw, Settings } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAppData } from '@/contexts/AppDataContext';
 import {
@@ -23,6 +23,8 @@ import { GoogleBackupSection } from '@/components/backup/GoogleBackup';
 import { AiSettings } from '@/components/ai/AiSettings';
 import { useRamadanSettings } from '@/hooks/useRamadan';
 import { governorate, RAMADAN_MODE_NAME } from '@/lib/ramadan';
+import { notificationSettings } from '@/lib/reminders';
+import { scheduleOf, WEEK_ORDER } from '@/lib/schedule';
 import { space, useTokens } from '@/theme';
 
 const GOAL_NAMES = {
@@ -39,7 +41,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const fmt = useFormat();
   const snackbar = useSnackbar();
-  const { L, language, formatDateTime } = useLanguage();
+  const { L, language, formatDateTime, weekdayName, formatTime } = useLanguage();
   const { profile, plan, settings, updateSettings } = useAppData();
   const [ramadan] = useRamadanSettings();
   const { status: healthStatus, syncing, sync, error: syncError } = useHealthSync();
@@ -66,6 +68,20 @@ export default function ProfileScreen() {
   if (!profile || !plan) return null;
 
   const kg = (n: number) => fmt(n, Number.isInteger(n) ? 0 : 1);
+  const schedule = scheduleOf(settings, profile);
+  const dayList = (list: number[]) => WEEK_ORDER.filter((d) => list.includes(d)).map((d) => weekdayName(new Date(2026, 10, 1 + d), 'short')).join(', ');
+  const trainingDays = [
+    dayList(schedule.weekdays),
+    schedule.optional.length ? L({ en: '{{d}} sometimes', fr: '{{d}} parfois', tn: '{{d}} ساعات', tnLatn: '{{d}} sa3at' }, { d: dayList(schedule.optional) }) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const ns = notificationSettings(settings.notifications);
+  const reminderTime = new Date();
+  reminderTime.setHours(Number(ns.trainingTime.slice(0, 2)), Number(ns.trainingTime.slice(3, 5)), 0, 0);
+  const reminderLine = ns.training
+    ? L({ en: 'Training days at {{t}}, rest timer, weigh-in', fr: 'Jours d’entraînement à {{t}}, repos, pesée', tn: 'أيّام التمرين على {{t}}، الراحة، الميزان', tnLatn: 'Iyem el sport 3la {{t}}, repos, mizen' }, { t: formatTime(reminderTime) })
+    : L({ en: 'Rest timer, reminders, lock screen', fr: 'Minuteur de repos, rappels, écran de verrouillage', tn: 'وقت الراحة، التذكيرات، شاشة القفل', tnLatn: 'Wa9t el repos, rappels, écran el 9fel' });
 
   const linked = settings.healthConnectEnabled && healthStatus === 'available';
   const healthText =
@@ -218,6 +234,22 @@ export default function ProfileScreen() {
       </Section>
 
       <Group style={{ marginTop: space.xxl }}>
+        <ListItem
+          title={L({ en: 'Training days', fr: 'Jours d’entraînement', tn: 'أيّام التمرين', tnLatn: 'Iyem el sport' })}
+          supporting={trainingDays}
+          leading={(c) => <CalendarDays size={22} color={c} />}
+          onPress={() => router.push('/schedule')}
+          chevron
+          divider
+        />
+        <ListItem
+          title={L({ en: 'Notifications', fr: 'Notifications', tn: 'الإشعارات', tnLatn: 'Notifications' })}
+          supporting={reminderLine}
+          leading={(c) => <BellRing size={22} color={c} />}
+          onPress={() => router.push('/notifications')}
+          chevron
+          divider
+        />
         <ListItem
           title={L({ en: 'Ramadan', fr: 'Ramadan', tn: 'رمضان', tnLatn: 'Romdhan' })}
           supporting={`${L(RAMADAN_MODE_NAME[ramadan.mode])} · ${L(governorate(ramadan.city).name)}`}
