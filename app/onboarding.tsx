@@ -70,6 +70,7 @@ import { bmi, computePlan } from '@/lib/nutritionMath';
 import { generateWorkoutPlan } from '@/lib/workoutGenerator';
 import { motion, radius, space, useTokens } from '@/theme';
 import { LanguagePicker } from '@/components/settings/LanguagePicker';
+import { LIMITATION_NAMES } from '@/lib/swap';
 
 type Icon = typeof Flame;
 
@@ -282,12 +283,10 @@ const EQUIPMENT: { id: EquipmentProfile; icon: Icon; title: LocalizedText; desc:
   },
 ];
 
-const LIMITATIONS: { id: Limitation; label: LocalizedText }[] = [
-  { id: 'knees', label: { en: 'Knees', fr: 'Genoux', tn: 'الركايب', tnLatn: 'Rkayeb' } },
-  { id: 'lower_back', label: { en: 'Lower back', fr: 'Bas du dos', tn: 'لوطة الظهر', tnLatn: 'Bas du dos' } },
-  { id: 'shoulders', label: { en: 'Shoulders', fr: 'Épaules', tn: 'الكتاف', tnLatn: 'Ktef' } },
-  { id: 'wrists', label: { en: 'Wrists', fr: 'Poignets', tn: 'المعاصم', tnLatn: 'Poignets' } },
-];
+const LIMITATIONS: { id: Limitation; label: LocalizedText }[] = (['knees', 'lower_back', 'shoulders', 'wrists'] as const).map((id) => ({
+  id,
+  label: LIMITATION_NAMES[id],
+}));
 
 const DIET_PREFS: { id: DietPref; label: LocalizedText }[] = [
   { id: 'halal', label: { en: 'Halal', fr: 'Halal', tn: 'حلال', tnLatn: 'Halal' } },

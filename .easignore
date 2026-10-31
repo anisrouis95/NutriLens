@@ -1,5 +1,5 @@
 # Files EAS Build does not upload. It replaces .gitignore for EAS, and the one
-# difference is that `.env` IS uploaded, so the keys in it (OpenRouter, Gemini)
+# difference is that `.env` IS uploaded, so the AI keys in it (Gemini, Groq, OpenRouter)
 # are built into the APK. Keep .env out of git all the same.
 
 # dependencies

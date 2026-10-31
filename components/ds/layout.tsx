@@ -26,7 +26,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 export const TOP_BAR_HEIGHT = 64;
 /** Space the floating navigation bar needs at the bottom of tab screens. */
-export const NAV_BAR_SPACE = 104;
+/** Room under tab screens for the bar and the active circle that rises above it. */
+export const NAV_BAR_SPACE = 112;
 
 // ---------------------------------------------------------------------------
 // Screen

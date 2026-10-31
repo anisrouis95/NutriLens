@@ -53,7 +53,7 @@ import {
   recognizeFoodFromPhoto,
   recognizeFoodFromText,
 } from '@/services/foodRecognitionService';
-import { GeminiError } from '@/services/gemini';
+import { GeminiError } from '@/services/ai';
 import { PackagedFood, lookupBarcode, searchPackagedFoods } from '@/services/openFoodFacts';
 import { radius, space, useTokens } from '@/theme';
 import type { MealType } from '@/types';

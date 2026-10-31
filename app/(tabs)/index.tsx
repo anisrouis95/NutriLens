@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import {
   Bot,
   ChartLine,
-  CircleUser,
   Dumbbell,
   Footprints,
   GraduationCap,
@@ -178,11 +177,6 @@ export default function TodayScreen() {
             label={L({ en: 'Progress', fr: 'Progression', tn: 'التقدّم', tnLatn: 'Progrès' })}
             onPress={() => router.push('/progress')}
             icon={(c) => <ChartLine size={22} color={c} />}
-          />
-          <IconButton
-            label={L({ en: 'Profile', fr: 'Profil', tn: 'البروفيل', tnLatn: 'Profil' })}
-            onPress={() => router.push('/profile')}
-            icon={(c) => <CircleUser size={22} color={c} />}
           />
         </View>
         {/* Ramadan frames a fasting day (and gives a heads-up in the weeks before it). */}

@@ -374,9 +374,9 @@ Large numerals cap system font scaling at 1.25x and text at 1.6x so a big number
 
 A single-column phone layout on a 20dp screen gutter (`gutter`). Vertical rhythm uses the 4-based scale (2, 4, 8, 12, 16, 24, 32, 48dp): sections sit 32dp apart with 12dp under their Anton title, list rows have 16dp side padding, related controls sit 8dp apart.
 
-Screens open with a 64dp top bar over a large Anton title; on scroll the large title fades and lifts out over 48dp while the bar tints from ground to Graphite Low and the small title slides in. Tab screens reserve 104dp at the bottom for the floating nav bar; the volt camera FAB floats 16dp above it at the right edge.
+Screens open with a 64dp top bar over a large Anton title; on scroll the large title fades and lifts out over 48dp while the bar tints from ground to Graphite Low and the small title slides in. Tab screens reserve 112dp at the bottom for the nav bar and its raised circle; the volt camera FAB floats 16dp above it at the right edge.
 
-Today reads top to bottom: the date line and two icon buttons, the full-width workout photo card, the week as story bars with its session count, then calories left in numHero with a volt line and eaten/target labels, then three macro columns.
+Today reads top to bottom: the date line and the progress button, the full-width workout photo card, the week as story bars with its session count, then calories left in numHero with a volt line and eaten/target labels, then three macro columns.
 
 On a fasting day (Ramadan mode) Today opens with the Ramadan card above the workout card: a graphite card with a volt RAMADAN · DAY n overline and the governorate, the countdown in Anton (to iftar while fasting, to the end of suhoor at night), a 4dp volt line through the fast, and one line of guidance (when to train, what to eat at suhoor, water). In the three weeks before Ramadan the same slot holds a one-line heads-up.
 
@@ -436,7 +436,11 @@ A 44dp Graphite pill with a 3dp inset; a white indicator springs under the chose
 - **Stepper and ruler:** 44dp round graphite steppers; the ruler shows its value in numHero with a 3dp volt indicator over graphite ticks.
 
 ### Navigation
-- **Nav bar:** 80dp on the ground with a hairline top edge; destinations Today, Train, Food, Learn. The active destination gets a 64 by 32dp Graphite High pill behind a white 22dp icon and an Inter Bold 12sp label; inactive items are tertiary. The pill grows in over 220ms.
+- **Nav bar:** 72dp on the ground with a hairline top edge; destinations Today, Train, Food, Learn, Profile. Every destination is a 24dp icon over its 12sp label.
+  - **The active one:** a 54dp volt circle sits on the bar's top edge, rising 24dp above it, with a 6dp ground-coloured ring that cuts it out of the hairline like a notch. The active icon lifts into the circle and turns ink, cross-faded so it never vanishes mid-way. Its label stays under the icon in white Inter Bold.
+  - **Inactive:** tertiary icon and label.
+  - **Moving:** tapping another destination slides the circle across on a spring (damping 15, stiffness 170), with a short squash as it leaves (scaleX 1.14 for 110ms). Reduced motion places it without travelling. Right to left, it travels the other way.
+  - **Profile** lives here; Today's top bar keeps only the progress button.
 - **FAB:** a 60dp volt circle with a black camera icon, entering on a settle spring; it can extend to show an uppercase label.
 - **Top bar:** 64dp, back arrow in a 48dp icon button, collapsing Anton title.
 

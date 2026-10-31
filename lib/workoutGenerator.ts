@@ -203,7 +203,8 @@ function availableCandidates(slot: MovementSlot, profile: Profile): string[] {
   });
 }
 
-function prescription(
+/** Sets, reps and rest for an exercise in a slot (also used when an exercise is swapped). */
+export function prescription(
   slot: MovementSlot,
   exerciseId: string,
   profile: Profile,
@@ -238,6 +239,39 @@ function prescription(
 /** Rough minutes an exercise takes: work + rest per set, plus setup. */
 function minutesFor(p: Pick<PlannedExercise, 'sets' | 'restSec'>) {
   return (p.sets * (45 + p.restSec) + 90) / 60;
+}
+
+/** The main muscles a day's exercises train. */
+function focusOf(exercises: PlannedExercise[]): string[] {
+  const focus = new Set<string>();
+  for (const e of exercises) {
+    for (const m of getExercise(e.exerciseId)?.primaryMuscles ?? []) focus.add(m);
+  }
+  return [...focus];
+}
+
+/**
+ * Replaces one exercise of the program with another for the same slot: new
+ * sets, reps and rest for it, the old one first among the alternatives.
+ */
+export function swapInPlan(plan: WorkoutPlan, dayId: string, index: number, newId: string, profile: Profile): WorkoutPlan {
+  return {
+    ...plan,
+    days: plan.days.map((d) => {
+      if (d.id !== dayId) return d;
+      const exercises = d.exercises.map((e, i) =>
+        i !== index
+          ? e
+          : {
+              ...e,
+              exerciseId: newId,
+              ...prescription(e.slot as MovementSlot, newId, profile),
+              alternatives: [e.exerciseId, ...e.alternatives.filter((a) => a !== newId)].slice(0, 3),
+            },
+      );
+      return { ...d, exercises, focus: focusOf(exercises) };
+    }),
+  };
 }
 
 export function generateWorkoutPlan(profile: Profile): WorkoutPlan {
@@ -277,11 +311,7 @@ export function generateWorkoutPlan(profile: Profile): WorkoutPlan {
       });
     }
 
-    const focus = new Set<string>();
-    for (const e of exercises) {
-      for (const m of getExercise(e.exerciseId)?.primaryMuscles ?? []) focus.add(m);
-    }
-    return { id: tpl.key, name: tpl.name, focus: [...focus], exercises };
+    return { id: tpl.key, name: tpl.name, focus: focusOf(exercises), exercises };
   });
 
   return {

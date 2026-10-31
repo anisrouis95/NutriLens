@@ -1,4 +1,4 @@
-// Shared by the AI providers (Gemini, OpenRouter) so neither imports the other.
+// Shared by the AI providers (Gemini, Groq, OpenRouter) and the router in services/ai.ts.
 
 export type GeminiErrorCode =
   | 'no_key'
@@ -36,4 +36,12 @@ export interface GenerateOptions {
   /** OpenAPI-style schema; when set the reply is parsed as JSON. */
   responseSchema?: Record<string, unknown>;
   temperature?: number;
+}
+
+export type ProviderId = 'gemini' | 'groq' | 'openrouter';
+
+/** Who answered a request (shown in Profile so a problem can be traced). */
+export interface AiAnswer {
+  provider: ProviderId;
+  model: string;
 }

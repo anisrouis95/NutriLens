@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Check,
   ChevronDown,
+  ArrowLeftRight,
   ChevronRight,
   CircleHelp,
   Dumbbell,
@@ -24,9 +25,11 @@ import { useAppData } from '@/contexts/AppDataContext';
 import {
   Appear,
   Button,
+  DirIcon,
   Divider,
   EmptyState,
   Group,
+  IconButton,
   NAV_BAR_SPACE,
   Screen,
   Section,
@@ -35,7 +38,6 @@ import {
   Txt,
   useFormat,
   useSnackbar,
-  DirIcon,
 } from '@/components/ds';
 import MuscleMap from '@/components/exercise/MuscleMap';
 import { ExerciseThumb } from '@/components/exercise/ExerciseAnimation';
@@ -44,7 +46,9 @@ import WorkoutCard from '@/components/train/WorkoutCard';
 import RamadanTrainingHint from '@/components/ramadan/RamadanTrainingHint';
 import { machineInfo, sessionMinutes } from '@/lib/cardio';
 import { MUSCLE_TO_SLUGS, Muscle, exerciseImageUrls, exerciseName, getExercise } from '@/lib/exercises';
-import { generateWorkoutPlan, nextWorkoutDay } from '@/lib/workoutGenerator';
+import { generateWorkoutPlan, nextWorkoutDay, swapInPlan } from '@/lib/workoutGenerator';
+import SwapSheet from '@/components/train/SwapSheet';
+import { conflicts, LIMITATION_NAMES } from '@/lib/swap';
 import { addDays } from '@/lib/nutritionMath';
 import { motion, space, useTokens } from '@/theme';
 import type { CardioSession, PlannedExercise, Sex, WorkoutDay, WorkoutSession } from '@/types';
@@ -100,12 +104,24 @@ function DoneThisWeek() {
   );
 }
 
+/** Shown on an exercise that loads a joint the user marked as painful. */
+export const HARD_ON = {
+  en: 'Hard on your {{parts}}: swap it ⇄',
+  fr: 'Difficile pour tes {{parts}} : remplace-le ⇄',
+  tn: 'يتعب {{parts}} متاعك: بدّلو ⇄',
+  tnLatn: 'Yta3eb {{parts}} mte3ek: baddlou ⇄',
+};
+
 /** The session's exercises; each row opens the exercise with its place in the plan. */
 function ExerciseRows({ day, style }: { day: WorkoutDay; style?: StyleProp<ViewStyle> }) {
   const t = useTokens();
   const router = useRouter();
-  const { language } = useLanguage();
+  const snackbar = useSnackbar();
+  const { L, language } = useLanguage();
+  const { profile, workoutPlan, setWorkoutPlan } = useAppData();
   const prescription = usePrescription();
+  const [swapIndex, setSwapIndex] = useState<number | null>(null);
+  const swapping = swapIndex !== null ? day.exercises[swapIndex] : undefined;
   const rows = day.exercises.flatMap((pe, i) => {
     const ex = getExercise(pe.exerciseId);
     return ex ? [{ pe, i, ex }] : [];
@@ -115,13 +131,15 @@ function ExerciseRows({ day, style }: { day: WorkoutDay; style?: StyleProp<ViewS
     <Group style={style}>
       {rows.map(({ pe, i, ex }, n) => (
         <View key={`${pe.exerciseId}-${i}`}>
+          {/* The row opens the exercise; the swap button sits beside it (not inside: no button in a button). */}
+          <View style={styles.exRowOuter}>
           <Tap
             onPress={() =>
               router.push({ pathname: '/exercise/[id]', params: { id: pe.exerciseId, day: day.id, index: String(i) } })
             }
             pressScale={1}
             pressedStyle={{ backgroundColor: t.pressed }}
-            style={styles.exRow}
+            style={[styles.exRow, { flex: 1, paddingRight: 0 }]}
           >
             <ExerciseThumb uri={exerciseImageUrls(ex)[0]} size={THUMB} />
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -131,12 +149,38 @@ function ExerciseRows({ day, style }: { day: WorkoutDay; style?: StyleProp<ViewS
               <Txt variant="numSmall" tone="secondary" style={{ marginTop: 2 }}>
                 {prescription(pe)}
               </Txt>
+              {profile && conflicts(pe.exerciseId, profile).length ? (
+                <Txt variant="caption" tone="danger" style={{ marginTop: 2 }}>
+                  {L(HARD_ON, { parts: conflicts(pe.exerciseId, profile).map((l) => L(LIMITATION_NAMES[l])).join(', ').toLowerCase() })}
+                </Txt>
+              ) : null}
             </View>
             <DirIcon icon={ChevronRight} size={20} color={t.textTertiary} />
           </Tap>
+          <IconButton
+            label={L({ en: 'Swap exercise', fr: 'Changer d’exercice', tn: 'بدّل التمرين', tnLatn: 'Baddel l exercice' })}
+            onPress={() => setSwapIndex(i)}
+            size={48}
+            icon={(c) => <ArrowLeftRight size={20} color={c} />}
+          />
+          </View>
           {n < rows.length - 1 ? <Divider inset={space.lg + THUMB + space.md} /> : null}
         </View>
       ))}
+      {swapping && swapIndex !== null ? (
+        <SwapSheet
+          visible
+          onClose={() => setSwapIndex(null)}
+          currentId={swapping.exerciseId}
+          slot={swapping.slot}
+          exclude={day.exercises.filter((_, k) => k !== swapIndex).map((e) => e.exerciseId)}
+          onPick={(id) => {
+            if (profile && workoutPlan) setWorkoutPlan(swapInPlan(workoutPlan, day.id, swapIndex, id, profile));
+            setSwapIndex(null);
+            snackbar.show(L({ en: 'Swapped in your program', fr: 'Remplacé dans ton programme', tn: 'تبدّل في البرنامج متاعك', tnLatn: 'Tbaddel fel programme mte3ek' }));
+          }}
+        />
+      ) : null}
     </Group>
   );
 }
@@ -566,6 +610,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.md,
   },
   dayBody: { paddingBottom: space.xl },
+  exRowOuter: { flexDirection: 'row', alignItems: 'center', paddingRight: space.xs },
   exRow: {
     flexDirection: 'row',
     alignItems: 'center',

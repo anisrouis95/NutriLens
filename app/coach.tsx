@@ -15,7 +15,7 @@ import { Bot, Send, Trash2 } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Appear, Button, Chip, ChipRow, Field, IconButton, RichText, Screen, Txt, Why, useSnackbar } from '@/components/ds';
-import { GeminiContent, GeminiError, generate } from '@/services/gemini';
+import { GeminiContent, GeminiError, generate } from '@/services/ai';
 import { addDays, sumNutrition, weightTrend } from '@/lib/nutritionMath';
 import { getExercise } from '@/lib/exercises';
 import { loadJSON, saveJSON } from '@/lib/storage';

@@ -1,6 +1,6 @@
 // Food recognition from a photo or a text description, powered by Gemini.
 
-import { generateJSON, imageToBase64 } from '@/services/gemini';
+import { generateJSON, imageToBase64 } from '@/services/ai';
 import { aiLanguageName, type Language } from '@/lib/i18n';
 
 export type Confidence = 'high' | 'medium' | 'low';

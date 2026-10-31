@@ -39,12 +39,17 @@ export async function saveJSON(key: string, value: unknown): Promise<void> {
 export async function clearAppData(): Promise<void> {
   await AsyncStorage.multiRemove(Object.values(STORAGE_KEYS));
   await deleteSecret(SECRET_KEYS.geminiApiKey);
+  await deleteSecret(SECRET_KEYS.groqApiKey);
   await deleteSecret(SECRET_KEYS.openRouterApiKey);
 }
 
 // Secrets (API keys) live in the Android Keystore via SecureStore. The web
 // preview has no keystore, so it falls back to AsyncStorage there.
-export const SECRET_KEYS = { geminiApiKey: 'nl_gemini_api_key', openRouterApiKey: 'nl_openrouter_api_key' } as const;
+export const SECRET_KEYS = {
+  geminiApiKey: 'nl_gemini_api_key',
+  groqApiKey: 'nl_groq_api_key',
+  openRouterApiKey: 'nl_openrouter_api_key',
+} as const;
 
 export async function getSecret(key: string): Promise<string | null> {
   if (Platform.OS === 'web') return AsyncStorage.getItem(`@secret/${key}`);

@@ -455,6 +455,7 @@ export const exerciseExtrasA: Record<string, ExerciseExtra> = {
       t("Knee caving in as you step up.", "Genou qui rentre en montant.", "الركبة تدخل لداخل وانت تطلع.", "Rokba tod5ol ldekhel w enti tetla3."),
     ],
     difficulty: 1,
+    avoidIf: ['knees'],
     repRange: [10, 15],
     unilateral: true,
   },

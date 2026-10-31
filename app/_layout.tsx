@@ -100,7 +100,6 @@ function RootLayoutNav() {
           <Stack.Screen name="plan" />
           <Stack.Screen name="scan" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="progress" />
-          <Stack.Screen name="profile" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="fasting" />
           <Stack.Screen name="library" />

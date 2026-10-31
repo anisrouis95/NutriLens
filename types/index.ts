@@ -168,6 +168,8 @@ export interface WorkoutSession {
   startedAt: string;
   finishedAt?: string;
   sets: LoggedSet[];
+  /** Exercises swapped for this session only: program exercise id → the one done instead. */
+  swaps?: Record<string, string>;
 }
 
 /** Cardio machines and outdoor activities the cardio log knows. */

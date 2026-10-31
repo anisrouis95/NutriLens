@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import { ChevronRight, CircleAlert, Dumbbell, Languages, Lightbulb, Repeat } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { swapOptions } from '@/lib/swap';
+import { swapInPlan as swapPlan } from '@/lib/workoutGenerator';
 import { aiLanguageName } from '@/lib/i18n';
 import { useAppData } from '@/contexts/AppDataContext';
 import {
@@ -37,7 +39,7 @@ import {
 } from '@/lib/exercises';
 import { exerciseExtras } from '@/data/exerciseCuration';
 import { loadJSON, saveJSON } from '@/lib/storage';
-import { generate } from '@/services/gemini';
+import { generate } from '@/services/ai';
 import { radius, space, useTokens } from '@/theme';
 
 const THUMB = 56;
@@ -75,10 +77,20 @@ export default function ExerciseScreen() {
 
   // Cached translation of the step-by-step instructions (the dataset is English only).
   const stepsKey = exercise ? (language === 'fr' ? `@nl/tr/${exercise.id}` : `@nl/tr/${language}/${exercise.id}`) : '';
+  // Set below once `translate` exists; the first open of an exercise translates it quietly.
+  const autoTranslate = useRef<(() => void) | null>(null);
   useEffect(() => {
     setLocalSteps(null);
     if (language === 'en' || !stepsKey) return;
-    loadJSON<string[] | null>(stepsKey, null).then(setLocalSteps);
+    let alive = true;
+    loadJSON<string[] | null>(stepsKey, null).then((cached) => {
+      if (!alive) return;
+      if (cached) setLocalSteps(cached);
+      else autoTranslate.current?.();
+    });
+    return () => {
+      alive = false;
+    };
   }, [language, stepsKey]);
 
   const history = useMemo(() => {
@@ -101,7 +113,8 @@ export default function ExerciseScreen() {
     );
   }
 
-  const translate = async () => {
+  /** Translates the steps (and caches them). `quiet`: the automatic first try shows no error; the button stays. */
+  const translate = async (quiet = false) => {
     setTranslating(true);
     try {
       const text = await generate({
@@ -126,7 +139,7 @@ export default function ExerciseScreen() {
       saveJSON(stepsKey, steps);
     } catch {
       // Keep the English steps on failure.
-      snackbar.show(L({
+      if (!quiet) snackbar.show(L({
         en: 'Couldn’t translate right now.',
         fr: 'Traduction impossible pour le moment.',
         tn: 'ما نجّمناش نترجمو توّا.',
@@ -136,30 +149,24 @@ export default function ExerciseScreen() {
       setTranslating(false);
     }
   };
+  autoTranslate.current = () => {
+    if (!translating) translate(true);
+  };
 
   const swapInPlan = (newId: string) => {
-    if (!workoutPlan || !plannedDay || !planned) return;
-    const days = workoutPlan.days.map((d) =>
-      d.id !== plannedDay.id
-        ? d
-        : {
-            ...d,
-            exercises: d.exercises.map((e, i) =>
-              i !== plannedIndex
-                ? e
-                : {
-                    ...e,
-                    exerciseId: newId,
-                    alternatives: [e.exerciseId, ...e.alternatives.filter((a) => a !== newId)].slice(0, 3),
-                  },
-            ),
-          },
-    );
-    setWorkoutPlan({ ...workoutPlan, days });
+    if (!workoutPlan || !plannedDay || !planned || !profile) return;
+    setWorkoutPlan(swapPlan(workoutPlan, plannedDay.id, plannedIndex, newId, profile));
     snackbar.show(L({ en: 'Swapped in your plan', fr: 'Remplacé dans ton plan', tn: 'تبدّل في البرنامج متاعك', tnLatn: 'Tbaddel fel programme mte3ek' }));
     router.replace({ pathname: '/exercise/[id]', params: { id: newId, day, index } });
   };
 
+  // Live, so a program built before the questionnaire changed never suggests an exercise that hurts.
+  const alternatives =
+    planned && profile
+      ? swapOptions(planned.exerciseId, planned.slot, profile, plannedDay?.exercises.map((e) => e.exerciseId) ?? [])
+          .options.slice(0, 3)
+          .map((o) => o.id)
+      : [];
   const images = exerciseImageUrls(exercise);
   const steps = language !== 'en' && localSteps ? localSteps : exercise.instructions;
   const muscles = [
@@ -286,7 +293,7 @@ export default function ExerciseScreen() {
               label={L({ en: 'Translate', fr: 'Traduire', tn: 'ترجم', tnLatn: 'Tarjem' })}
               variant="text"
               icon={(c) => <Languages size={20} color={c} />}
-              onPress={translate}
+              onPress={() => translate()}
               loading={translating}
               style={{ marginRight: -space.md }}
             />
@@ -325,7 +332,7 @@ export default function ExerciseScreen() {
         </Section>
       ) : null}
 
-      {planned && planned.alternatives.length ? (
+      {planned && alternatives.length ? (
         <Section title={L({ en: 'Swap for an alternative', fr: 'Remplacer par une alternative', tn: 'بدّلو بتمرين آخر', tnLatn: 'Baddlou b exercice ekher' })}>
           <Txt variant="caption" tone="secondary" style={{ marginBottom: space.md }}>
             {L({
@@ -336,7 +343,7 @@ export default function ExerciseScreen() {
             })}
           </Txt>
           <Group>
-            {planned.alternatives.map((altId, n) => {
+            {alternatives.map((altId, n) => {
               const alt = getExercise(altId);
               if (!alt) return null;
               return (
@@ -363,7 +370,7 @@ export default function ExerciseScreen() {
                       style={styles.useButton}
                     />
                   </View>
-                  {n < planned.alternatives.length - 1 ? <Divider inset={space.lg + THUMB + space.md} /> : null}
+                  {n < alternatives.length - 1 ? <Divider inset={space.lg + THUMB + space.md} /> : null}
                 </View>
               );
             })}

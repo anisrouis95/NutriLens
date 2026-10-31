@@ -1,25 +1,24 @@
-// OpenRouter client (OpenAI-compatible chat API), used as a second AI provider
-// next to Gemini. It only ever picks models priced at zero, so a key without
-// credits keeps working on the free daily allowance and is never charged.
-// REST only, so it runs in Expo Go, dev builds and the web preview alike.
+// OpenRouter (OpenAI-style chat API). Only models priced at zero are used, so
+// a key without credits keeps working on the free daily allowance (about 50
+// requests a day for the whole key) and is never charged. The free catalogue
+// changes often, so it is read live; a model closed to apps like this one
+// ("only available on agentic harnesses") is skipped, not taken as a bad key.
 
 import { SECRET_KEYS, getSecret } from '@/lib/storage';
 import { GeminiError, type GenerateOptions } from '@/services/aiTypes';
+import { ERROR_REST, HANG_REST, isResting, quotaRest, rest, UNAVAILABLE_REST } from '@/services/aiCooldown';
+import { AiTimeout, IMAGE_TIMEOUT, TEXT_TIMEOUT, timedFetch } from '@/services/aiFetch';
+import { readChat, toMessages } from '@/services/openaiCompat';
 
 const API = 'https://openrouter.ai/api/v1';
 
-/**
- * Tried first when they are free and available (best photo and French skills
- * first); the live list fills in the rest, and OpenRouter's own free router
- * comes last as a catch-all.
- */
+/** Best photo and French skills first; the live list fills in the rest. */
 const PREFERRED = [/gemma-4-31b/i, /gemma-4/i, /gemma/i, /gemini/i, /qwen.*vl/i, /llama-4/i, /mistral-small/i, /nemotron.*omni/i];
 const ROUTER = 'openrouter/free';
-/**
- * Free entries that aren't general assistants (classifiers, music), or that
- * OpenRouter only serves to coding agents (Inkling answers apps with a 403).
- */
+/** Free entries that aren't general assistants (classifiers, music, agent-only models). */
 const NOT_ASSISTANTS = /safety|guard|moderation|lyria|music|embed|inkling/i;
+/** Each try spends one of the key's ~50 free requests a day: two models, then the free router. */
+const MAX_MODELS = 2;
 
 const HEADERS = { 'Content-Type': 'application/json', 'X-Title': 'Tounsi Fit' };
 
@@ -43,10 +42,15 @@ interface ModelInfo {
 
 let cache: { at: number; text: string[]; vision: string[] } | null = null;
 
-/** Free models from OpenRouter's live catalogue (free models come and go), cached for 6 hours. */
+/** Free models from OpenRouter's live catalogue, cached for 6 hours. */
 async function freeModels(needsImage: boolean): Promise<string[]> {
   if (!cache || Date.now() - cache.at > 6 * 3600_000) {
-    const res = await fetch(`${API}/models`);
+    let res: Response;
+    try {
+      res = await timedFetch(`${API}/models`, {}, TEXT_TIMEOUT);
+    } catch {
+      throw new GeminiError('network', 'Could not reach OpenRouter');
+    }
     if (!res.ok) throw new GeminiError('server', `OpenRouter models ${res.status}`);
     const { data } = (await res.json()) as { data: ModelInfo[] };
     const free = data.filter(
@@ -69,81 +73,49 @@ async function freeModels(needsImage: boolean): Promise<string[]> {
   return needsImage ? cache.vision : cache.text;
 }
 
-type Message = {
-  role: 'system' | 'user' | 'assistant';
-  content: string | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
-};
-
-function toMessages(opts: GenerateOptions): { messages: Message[]; hasImage: boolean } {
-  let hasImage = false;
-  let system = opts.system ?? '';
-  if (opts.responseSchema) {
-    // Free models rarely support structured output, so the schema goes in the prompt.
-    system += `\n\nReply with ONE JSON object only (no prose, no code fences) that matches this schema:\n${JSON.stringify(opts.responseSchema)}`;
-  }
-  const messages: Message[] = system ? [{ role: 'system', content: system.trim() }] : [];
-  for (const c of opts.contents) {
-    const parts = c.parts.map((p) => {
-      if ('text' in p) return { type: 'text' as const, text: p.text };
-      hasImage = true;
-      return { type: 'image_url' as const, image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` } };
-    });
-    messages.push({ role: c.role === 'model' ? 'assistant' : 'user', content: parts });
-  }
-  return { messages, hasImage };
-}
-
-/** Returns the reply text from the first free model that answers. */
-export async function generateOpenRouter(key: string, opts: GenerateOptions): Promise<string> {
+/** The reply from the first free model that answers. */
+export async function generateOpenRouter(key: string, opts: GenerateOptions): Promise<{ text: string; model: string }> {
+  // The key's free daily allowance is shared by every model: when it's spent, rest the whole provider.
+  if (await isResting('openrouter:*')) throw new GeminiError('quota', 'OpenRouter’s free requests for today are used up');
   const { messages, hasImage } = toMessages(opts);
-  let models: string[];
-  try {
-    models = await freeModels(hasImage);
-  } catch (e) {
-    throw e instanceof GeminiError ? e : new GeminiError('network', 'Could not reach OpenRouter');
-  }
+  const models = await freeModels(hasImage);
   if (!models.length) throw new GeminiError('server', 'OpenRouter has no free model for this right now');
 
+  const candidates: string[] = [];
+  for (const m of models) {
+    if (m === ROUTER || candidates.length >= MAX_MODELS) continue;
+    if (!(await isResting(`openrouter:${m}`))) candidates.push(m);
+  }
+  if (models.includes(ROUTER)) candidates.push(ROUTER);
+
   let lastError: GeminiError | null = null;
-  // A few of the best free models, then the free router as the last resort.
-  const order = [...models.filter((m) => m !== ROUTER).slice(0, 3), ...(models.includes(ROUTER) ? [ROUTER] : [])];
-  for (const model of order) {
+  for (const model of candidates) {
+    const id = `openrouter:${model}`;
     let res: Response;
     try {
-      res = await fetch(`${API}/chat/completions`, {
+      res = await timedFetch(`${API}/chat/completions`, {
         method: 'POST',
         headers: { ...HEADERS, Authorization: `Bearer ${key}` },
         body: JSON.stringify({ model, messages, temperature: opts.temperature ?? 0.2 }),
-      });
-    } catch {
+      }, hasImage ? IMAGE_TIMEOUT : TEXT_TIMEOUT);
+    } catch (e) {
+      if (e instanceof AiTimeout) {
+        lastError = new GeminiError('server', `${model}: no answer in time`);
+        await rest(id, HANG_REST);
+        continue;
+      }
       throw new GeminiError('network', 'Could not reach OpenRouter');
     }
     const body = await res.text();
     if (res.ok) {
-      let text = '';
-      try {
-        const json = JSON.parse(body);
-        if (json?.error) {
-          lastError = new GeminiError('server', `${model}: ${String(json.error.message ?? '').slice(0, 200)}`);
-          continue;
-        }
-        const content = json?.choices?.[0]?.message?.content;
-        text = typeof content === 'string' ? content : Array.isArray(content) ? content.map((c: { text?: string }) => c.text ?? '').join('') : '';
-      } catch {
-        // fall through to the empty check
-      }
-      if (text.trim()) return text;
-      lastError = new GeminiError('bad_response', `${model}: empty reply`);
+      const { text, error } = readChat(body);
+      if (text) return { text, model };
+      lastError = new GeminiError('server', `${model}: ${error ?? 'empty reply'}`);
+      await rest(id, ERROR_REST);
       continue;
     }
-    if (res.status === 401) {
-      throw new GeminiError('invalid_key', 'The OpenRouter key was rejected');
-    }
-    if (res.status === 403) {
-      // A refusal for this model only (moderation, gated endpoint), not the key.
-      lastError = new GeminiError('server', `${model}: ${body.slice(0, 200)}`);
-      continue;
-    }
+    // Only a 401 means the key itself is wrong; a 403 is one model closed to this app.
+    if (res.status === 401) throw new GeminiError('invalid_key', 'The OpenRouter key was rejected');
     if (res.status === 404 && /data policy|privacy/i.test(body)) {
       // Free endpoints need "allow training / logging" in the account's privacy settings.
       lastError = new GeminiError('data_policy', body.slice(0, 200));
@@ -151,30 +123,15 @@ export async function generateOpenRouter(key: string, opts: GenerateOptions): Pr
     }
     if (res.status === 402 || res.status === 429) {
       lastError = new GeminiError('quota', `${model}: ${body.slice(0, 200)}`);
+      if (/free-models-per-day|per day|daily/i.test(body)) {
+        await rest('openrouter:*', quotaRest(body));
+        break;
+      }
+      await rest(id, quotaRest(body));
       continue;
     }
     lastError = new GeminiError('server', `${model} ${res.status}: ${body.slice(0, 200)}`);
+    await rest(id, res.status === 403 || res.status === 404 || res.status === 400 ? UNAVAILABLE_REST : ERROR_REST);
   }
   throw lastError ?? new GeminiError('server', 'No OpenRouter model answered');
-}
-
-/**
- * Checks the key, then makes one tiny request through the free models, so a
- * privacy-setting or quota problem shows up here rather than at the first
- * meal photo (it uses one request of the daily allowance).
- */
-export async function testOpenRouterKey(): Promise<void> {
-  const key = await getOpenRouterKey();
-  if (!key) throw new GeminiError('no_key', 'No OpenRouter key set');
-  let res: Response;
-  try {
-    res = await fetch(`${API}/key`, { headers: { ...HEADERS, Authorization: `Bearer ${key}` } });
-  } catch {
-    throw new GeminiError('network', 'Could not reach OpenRouter');
-  }
-  if (res.status === 401 || res.status === 403) throw new GeminiError('invalid_key', 'The OpenRouter key was rejected');
-  if (!res.ok) throw new GeminiError('server', `OpenRouter ${res.status}`);
-  await generateOpenRouter(key, {
-    contents: [{ role: 'user', parts: [{ text: 'Reply with the single word OK.' }] }],
-  });
 }

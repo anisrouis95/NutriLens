@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, ArrowRight, ChevronRight, Dumbbell, Info, Plus, Timer, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, ArrowLeftRight, ArrowRight, ChevronRight, Dumbbell, Info, Plus, Timer, TrendingUp } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { decimalComma } from '@/lib/i18n';
 import { isFastingDay } from '@/lib/ramadan';
@@ -44,10 +44,13 @@ import {
 } from '@/components/ds';
 import ExerciseAnimation, { ExerciseThumb } from '@/components/exercise/ExerciseAnimation';
 import { Exercise, exerciseImageUrls, exerciseName, getExercise } from '@/lib/exercises';
-import { progressionHint } from '@/lib/workoutGenerator';
+import { prescription, progressionHint, swapInPlan } from '@/lib/workoutGenerator';
+import SwapSheet from '@/components/train/SwapSheet';
+import { conflicts, LIMITATION_NAMES } from '@/lib/swap';
+import type { MovementSlot } from '@/data/exerciseCuration';
 import { newId } from '@/lib/storage';
 import { fonts, radius, space, useTokens } from '@/theme';
-import type { LoggedSet, PlannedExercise, WorkoutSession } from '@/types';
+import type { LoggedSet, PlannedExercise, Profile, WorkoutSession } from '@/types';
 
 const SET_COL = 60;
 const CHECK = 44;
@@ -64,7 +67,8 @@ function nameSize(name: string) {
 }
 
 type Row = { s: LoggedSet; i: number };
-type Page = { pe: PlannedExercise; ex: Exercise; rows: Row[] };
+/** One exercise of the session: `planIndex`/`planId` locate it in the program, `pe` is what is done today (after a swap). */
+type Page = { pe: PlannedExercise; ex: Exercise; rows: Row[]; planIndex: number; planId: string };
 
 // ---------------------------------------------------------------------------
 // Big editable numeral: keeps the typed text (so "62." or "62,5" survive while
@@ -203,6 +207,7 @@ const ExercisePage = memo(function ExercisePage({
   onToggle,
   onAdd,
   onForm,
+  onSwap,
 }: {
   page: Page;
   width: number;
@@ -214,11 +219,14 @@ const ExercisePage = memo(function ExercisePage({
   onToggle: (globalIndex: number, restSec: number) => void;
   onAdd: (exerciseId: string) => void;
   onForm: (exerciseId: string) => void;
+  onSwap: (page: Page) => void;
 }) {
   const t = useTokens();
   const fmt = useFormat();
   const { L, language, rtl } = useLanguage();
   const { pe, ex, rows } = page;
+  const { profile } = useAppData();
+  const hardOn = profile ? conflicts(pe.exerciseId, profile) : [];
   const kg = (n: number) => fmt(n, Number.isInteger(n) ? 0 : 1);
   const unit = pe.timed ? 's' : L({ en: 'reps', fr: 'rép.', tn: 'مرّات', tnLatn: 'reps' });
   const min = pe.restSec / 60;
@@ -283,13 +291,29 @@ const ExercisePage = memo(function ExercisePage({
             <Txt variant="display" numberOfLines={3} style={[{ flex: 1 }, nameSize(exerciseName(ex, language))]} accessibilityRole="header">
               {exerciseName(ex, language)}
             </Txt>
-            <IconButton
-              label={L({ en: 'How to do it', fr: 'Comment le faire', tn: 'كيفاش تعملو', tnLatn: 'Kifech ta3mlou' })}
-              variant="tonal"
-              onPress={() => onForm(pe.exerciseId)}
-              icon={(c) => <Info size={22} color={c} />}
-            />
+            <View style={styles.nameActions}>
+              <IconButton
+                label={L({ en: 'Swap exercise', fr: 'Changer d’exercice', tn: 'بدّل التمرين', tnLatn: 'Baddel l exercice' })}
+                variant="tonal"
+                onPress={() => onSwap(page)}
+                icon={(c) => <ArrowLeftRight size={22} color={c} />}
+              />
+              <IconButton
+                label={L({ en: 'How to do it', fr: 'Comment le faire', tn: 'كيفاش تعملو', tnLatn: 'Kifech ta3mlou' })}
+                variant="tonal"
+                onPress={() => onForm(pe.exerciseId)}
+                icon={(c) => <Info size={22} color={c} />}
+              />
+            </View>
           </View>
+          {hardOn.length ? (
+            <Txt variant="label" tone="danger" style={{ marginTop: space.xs }}>
+              {L(
+                { en: 'Hard on your {{parts}}: swap it ⇄', fr: 'Difficile pour tes {{parts}} : remplace-le ⇄', tn: 'يتعب {{parts}} متاعك: بدّلو ⇄', tnLatn: 'Yta3eb {{parts}} mte3ek: baddlou ⇄' },
+                { parts: hardOn.map((l) => L(LIMITATION_NAMES[l])).join(', ').toLowerCase() },
+              )}
+            </Txt>
+          ) : null}
           <Txt variant="overline" tone="secondary" style={{ marginTop: space.xs }}>
             {`${pe.sets}${NB}×${NB}${pe.repsMin}–${pe.repsMax}${NB}${unit} · ${L({ en: 'rest', fr: 'repos', tn: 'راحة', tnLatn: 'repos' })}${NB}${rest} · ${lastText}`}
           </Txt>
@@ -461,6 +485,19 @@ function UpNext({ next, onPress }: { next?: Page; onPress: () => void }) {
   );
 }
 
+/** The exercise done today for a program entry: the program's, or the one swapped in for this session only. */
+function todaysExercise(planned: PlannedExercise, session: Pick<WorkoutSession, 'swaps'>, profile: Profile): PlannedExercise {
+  const id = session.swaps?.[planned.exerciseId];
+  if (!id || id === planned.exerciseId || !getExercise(id)) return planned;
+  return { ...planned, exerciseId: id, ...prescription(planned.slot as MovementSlot, id, profile) };
+}
+
+/** Fresh sets for an exercise: its prescription, with last time's weight pre-filled. */
+function freshSets(pe: PlannedExercise, last: LoggedSet[], count: number): LoggedSet[] {
+  const hint = progressionHint(pe, last);
+  return Array.from({ length: count }, () => ({ exerciseId: pe.exerciseId, reps: pe.repsMin, weightKg: hint.weightKg ?? 0, done: false }));
+}
+
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
@@ -474,7 +511,7 @@ export default function WorkoutScreen() {
   const reduce = useReducedMotion();
   const fmt = useFormat();
   const { L, language } = useLanguage();
-  const { workoutPlan, sessions, saveSession, deleteSession, today } = useAppData();
+  const { workoutPlan, setWorkoutPlan, profile, sessions, saveSession, deleteSession, today } = useAppData();
   const { dayId } = useLocalSearchParams<{ dayId: string }>();
   const day = workoutPlan?.days.find((d) => d.id === dayId);
   // Ramadan mode: one set fewer per exercise on a fasting day (never below 2).
@@ -502,17 +539,22 @@ export default function WorkoutScreen() {
 
   const [session, setSession] = useState<WorkoutSession | null>(() => {
     if (!day) return null;
+    const count = (pe: PlannedExercise) => (lighter ? Math.max(2, Math.min(pe.sets, pe.sets - 1)) : pe.sets);
     const unfinished = sessions.find((s) => s.dayId === day.id && !s.finishedAt && s.date === today);
-    if (unfinished) return unfinished;
-    const sets: LoggedSet[] = day.exercises.flatMap((pe) => {
-      const hint = progressionHint(pe, lastSets.get(pe.exerciseId) ?? []);
-      return Array.from({ length: lighter ? Math.max(2, Math.min(pe.sets, pe.sets - 1)) : pe.sets }, () => ({
-        exerciseId: pe.exerciseId,
-        reps: pe.repsMin,
-        weightKg: hint.weightKg ?? 0,
-        done: false,
-      }));
-    });
+    if (unfinished) {
+      // The program may have been rebuilt or swapped since this session started:
+      // exercises it now has get their sets; logged sets are always kept.
+      if (!profile) return unfinished;
+      const missing = day.exercises
+        .map((planned) => todaysExercise(planned, unfinished, profile))
+        .filter((pe) => !unfinished.sets.some((x) => x.exerciseId === pe.exerciseId));
+      if (!missing.length) return unfinished;
+      return {
+        ...unfinished,
+        sets: [...unfinished.sets, ...missing.flatMap((pe) => freshSets(pe, lastSets.get(pe.exerciseId) ?? [], count(pe)))],
+      };
+    }
+    const sets: LoggedSet[] = day.exercises.flatMap((pe) => freshSets(pe, lastSets.get(pe.exerciseId) ?? [], count(pe)));
     return {
       id: newId(),
       date: today,
@@ -529,15 +571,17 @@ export default function WorkoutScreen() {
   }, [session, saveSession]);
 
   const pages: Page[] = useMemo(() => {
-    if (!day || !session) return [];
+    if (!day || !session || !profile) return [];
     const indexed = session.sets.map((s, i) => ({ s, i }));
-    return day.exercises.flatMap((pe) => {
+    return day.exercises.flatMap((planned, planIndex) => {
+      const pe = todaysExercise(planned, session, profile);
       const ex = getExercise(pe.exerciseId);
       const rows = indexed.filter(({ s }) => s.exerciseId === pe.exerciseId);
       // The prescription shows the sets of this session when Ramadan mode trimmed them.
-      return ex ? [{ pe: rows.length < pe.sets ? { ...pe, sets: rows.length } : pe, ex, rows }] : [];
+      const shown = rows.length < pe.sets ? { ...pe, sets: rows.length } : pe;
+      return ex ? [{ pe: shown, ex, rows, planIndex, planId: planned.exerciseId }] : [];
     });
-  }, [day, session]);
+  }, [day, session, profile]);
 
   // Open on the first exercise with sets left (a resumed workout picks up where it stopped).
   const [index, setIndex] = useState(() => Math.max(0, pages.findIndex((p) => p.rows.some(({ s }) => !s.done))));
@@ -591,6 +635,7 @@ export default function WorkoutScreen() {
   }, []);
 
   const [finishOpen, setFinishOpen] = useState(false);
+  const [swapPage, setSwapPage] = useState<Page | null>(null);
 
   if (!day || !session || !pages.length) {
     return (
@@ -653,6 +698,46 @@ export default function WorkoutScreen() {
       sets.splice(lastIdx + 1, 0, { ...template, done: false });
       return { ...s, sets };
     });
+
+  /**
+   * Swaps an exercise in today's session; with `inProgram`, in the program too.
+   * Sets not yet done move to the new exercise; logged sets stay as they were.
+   */
+  const swapExercise = (page: Page, newExerciseId: string, inProgram: boolean) => {
+    if (!profile || !workoutPlan) return;
+    const oldId = page.pe.exerciseId;
+    const next: PlannedExercise = {
+      ...page.pe,
+      exerciseId: newExerciseId,
+      ...prescription(page.pe.slot as MovementSlot, newExerciseId, profile),
+    };
+    const hint = progressionHint(next, lastSets.get(newExerciseId) ?? []);
+    setSession((s) => {
+      if (!s) return s;
+      let moved = 0;
+      let sets = s.sets.map((x) => {
+        if (x.exerciseId !== oldId || x.done) return x;
+        moved++;
+        return { ...x, exerciseId: newExerciseId, reps: next.repsMin, weightKg: hint.weightKg ?? 0 };
+      });
+      // Every set was already done: the new exercise starts with its own sets after them.
+      if (!moved) {
+        const at = sets.map((x) => x.exerciseId).lastIndexOf(oldId) + 1;
+        sets = [...sets.slice(0, at), ...freshSets(next, lastSets.get(newExerciseId) ?? [], next.sets), ...sets.slice(at)];
+      }
+      const swaps = { ...s.swaps };
+      if (inProgram) delete swaps[page.planId];
+      else swaps[page.planId] = newExerciseId;
+      return { ...s, sets, swaps };
+    });
+    if (inProgram) setWorkoutPlan(swapInPlan(workoutPlan, day.id, page.planIndex, newExerciseId, profile));
+    setSwapPage(null);
+    snackbar.show(
+      inProgram
+        ? L({ en: 'Swapped, today and in your program', fr: 'Remplacé, aujourd’hui et dans ton programme', tn: 'تبدّل، اليوم وفي البرنامج متاعك', tnLatn: 'Tbaddel, lyoum w fel programme mte3ek' })
+        : L({ en: 'Swapped for today', fr: 'Remplacé pour aujourd’hui', tn: 'تبدّل لليوم', tnLatn: 'Tbaddel l lyoum' }),
+    );
+  };
 
   const doneSets = session.sets.filter((s) => s.done);
   const doneCount = doneSets.length;
@@ -814,12 +899,23 @@ export default function WorkoutScreen() {
             onUpdate={updateSet}
             onToggle={toggleDone}
             onAdd={addSet}
-            onForm={(id) =>
-              router.push({ pathname: '/exercise/[id]', params: { id, day: day.id, index: String(day.exercises.indexOf(item.pe)) } })
-            }
+            onForm={(id) => router.push({ pathname: '/exercise/[id]', params: { id, day: day.id, index: String(item.planIndex) } })}
+            onSwap={setSwapPage}
           />
         )}
       />
+
+      {swapPage ? (
+        <SwapSheet
+          visible
+          onClose={() => setSwapPage(null)}
+          currentId={swapPage.pe.exerciseId}
+          slot={swapPage.pe.slot}
+          exclude={pages.filter((p) => p.planIndex !== swapPage.planIndex).map((p) => p.pe.exerciseId)}
+          canKeepInSession
+          onPick={(id, inProgram) => swapExercise(swapPage, id, inProgram)}
+        />
+      ) : null}
 
       {!keyboard ? (
         <View style={[styles.dock, { paddingBottom: insets.bottom + space.md, backgroundColor: t.ground, borderTopColor: t.hairline }]}>
@@ -917,6 +1013,7 @@ const styles = StyleSheet.create({
   photoFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '40%' },
   nameBlock: { position: 'absolute', left: space.gutter, right: space.gutter, bottom: space.sm },
   nameRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
+  nameActions: { flexDirection: 'row', gap: space.sm },
   table: { marginTop: space.md, borderTopWidth: StyleSheet.hairlineWidth },
   setRow: {
     flexDirection: 'row',
