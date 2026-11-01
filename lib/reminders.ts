@@ -29,7 +29,7 @@ export const notificationSettings = (saved?: Partial<NotificationSettings>): Not
 });
 
 /** Android notification channels; each can also be switched off in the phone's settings. */
-export type ChannelId = 'workout' | 'rest-over' | 'training' | 'weigh-in' | 'meals' | 'ramadan';
+export type ChannelId = 'workout-live' | 'rest-over' | 'training' | 'weigh-in' | 'meals' | 'ramadan';
 
 export interface Reminder {
   /** Stable per kind and date, so a rebuild replaces rather than duplicates. */

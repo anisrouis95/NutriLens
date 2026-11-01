@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tounsi Fit",
     "slug": "nutrilens",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nutrilens",
@@ -29,7 +29,7 @@
         "android.permission.health.READ_DISTANCE",
         "android.permission.RECORD_AUDIO"
       ],
-      "versionCode": 11
+      "versionCode": 12
     },
     "web": {
       "bundler": "metro",

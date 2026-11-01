@@ -1,14 +1,84 @@
-// The workout's lock-screen notification and the phone settings behind
-// on-time reminders (Android only; see android/…/LiveTimerModule.kt). Every
+// The lock-screen workout and the phone settings behind on-time reminders
+// (Android only; see android/…/LiveWorkout.kt and LiveTimerModule.kt). Every
 // call is a no-op on the web preview and on builds without the module.
 
 import { Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
+import type { Effort } from '@/types';
+
+/** A set still to do, as the lock screen shows it. */
+export interface LiveItem {
+  /** "exerciseId#n": the n-th set of that exercise in the session (lib/liveEvents.ts). */
+  key: string;
+  name: string;
+  /** "Set 2/3" */
+  set: string;
+  /** "30 kg × 10" */
+  detail: string;
+  restSec: number;
+}
+
+export type LivePhase = 'ready' | 'working' | 'resting' | 'finished';
+
+export interface LiveLabels {
+  start: string;
+  logSet: string;
+  done: string;
+  easy: string;
+  good: string;
+  hard: string;
+  working: string;
+  rest: string;
+  next: string;
+  restOver: string;
+  allDone: string;
+  saveHint: string;
+  /** "{{day}} · {{done}}/{{total}} sets" */
+  progress: string;
+}
+
+export interface LiveState {
+  dayId: string;
+  day: string;
+  done: number;
+  total: number;
+  phase: LivePhase;
+  /** Next set first. */
+  items: LiveItem[];
+  setStartedAt?: number;
+  restEndsAt?: number;
+  /** The set waiting for Easy / Good / Hard. */
+  ratingKey?: string;
+  /** Start → Done (timed); off: one "Log set" button. */
+  timeSets: boolean;
+  /** Buzz when a rest ends. */
+  buzz: boolean;
+  channel: string;
+  alertChannel: string;
+  /** Android colour int (see `argb`). */
+  color: number;
+  labels: LiveLabels;
+}
+
+/** A lock-screen button press, waiting for the app to apply it. */
+export interface LiveEvent {
+  type: 'start' | 'done' | 'effort';
+  key: string;
+  at: number;
+  startedAt?: number;
+  effort?: Effort;
+}
+
+interface Subscription {
+  remove(): void;
+}
 
 interface LiveTimerNative {
-  showRest(endAtMs: number, title: string, body: string, channelId: string, color: number): void;
-  showSession(title: string, body: string, channelId: string, color: number): void;
-  clear(): void;
+  update(json: string): boolean;
+  stop(): void;
+  drain(): string;
+  peek(): string | null;
+  addListener(event: 'onLiveEvent', listener: () => void): Subscription;
   canScheduleExactAlarms(): boolean;
   openExactAlarmSettings(): boolean;
   isIgnoringBatteryOptimizations(): boolean;
@@ -23,20 +93,42 @@ const native = Platform.OS === 'android' ? requireOptionalNativeModule<LiveTimer
 export const liveTimerAvailable = !!native;
 
 /** "#D9FF3D" → the signed 32-bit ARGB int Android expects. */
-function argb(hex: string): number {
+export function argb(hex: string): number {
   return (0xff000000 | parseInt(hex.replace('#', ''), 16)) | 0;
 }
 
-export function showRest(endAt: number, title: string, body: string, channelId: string, color: string) {
-  native?.showRest(endAt, title, body, channelId, argb(color));
+/** Shows or refreshes the lock-screen workout. False while unread button presses wait (drain first). */
+export function updateLive(state: LiveState): boolean {
+  return native?.update(JSON.stringify(state)) ?? false;
 }
 
-export function showSession(title: string, body: string, channelId: string, color: string) {
-  native?.showSession(title, body, channelId, argb(color));
+export function stopLive() {
+  native?.stop();
 }
 
-export function clearLive() {
-  native?.clear();
+/** Button presses since the last call, oldest first. */
+export function drainLive(): LiveEvent[] {
+  try {
+    return native ? (JSON.parse(native.drain()) as LiveEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The lock-screen workout as last left (also after the app was closed), or null. */
+export function peekLive(): LiveState | null {
+  try {
+    const json = native?.peek();
+    return json ? (JSON.parse(json) as LiveState) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Called when a button is pressed while the app runs. Returns the unsubscribe. */
+export function onLiveEvent(listener: () => void): () => void {
+  const sub = native?.addListener('onLiveEvent', listener);
+  return () => sub?.remove();
 }
 
 export const canScheduleExactAlarms = () => native?.canScheduleExactAlarms() ?? true;

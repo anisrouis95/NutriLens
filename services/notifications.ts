@@ -1,29 +1,31 @@
 // Notifications on the phone: Android channels, the permission, the reminders
-// planned by lib/reminders.ts, the "rest over" alert, and the workout's
-// lock-screen countdown (modules/live-timer). Everything is local: no server,
-// no account, nothing leaves the phone. All calls are no-ops on the web preview.
+// planned by lib/reminders.ts, and the "rest over" alert for phones without the
+// lock-screen workout (modules/live-timer posts that one itself). Everything is
+// local: no server, no account, nothing leaves the phone. All calls are no-ops
+// on the web preview.
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { pick, type Language, type LocalizedText } from '@/lib/i18n';
 import type { ChannelId, Reminder } from '@/lib/reminders';
-import { clearLive, liveTimerAvailable, showRest, showSession } from '@/modules/live-timer';
 
 export const notificationsSupported = Platform.OS === 'android' || Platform.OS === 'ios';
-const VOLT = '#D9FF3D';
+export const VOLT = '#D9FF3D';
 const REST_ID = 'rest-over';
 const TEST_ID = 'test';
 
-const CHANNELS: Record<ChannelId, { name: LocalizedText; description: LocalizedText; importance: Notifications.AndroidImportance; buzz?: boolean }> = {
-  workout: {
+const CHANNELS: Record<ChannelId, { name: LocalizedText; description: LocalizedText; importance: Notifications.AndroidImportance; buzz?: boolean; silent?: boolean }> = {
+  // Silent but not "low": Android keeps it expanded on the lock screen, buttons showing.
+  'workout-live': {
     name: { en: 'Workout in progress', fr: 'Séance en cours', tn: 'حصّة قاعدة', tnLatn: 'Séance 9a3da' },
     description: {
-      en: 'The rest countdown and your next set, on the lock screen while you train.',
-      fr: 'Le compte à rebours du repos et ta prochaine série, sur l’écran de verrouillage pendant la séance.',
-      tn: 'العدّ متاع الراحة والسيري الجاية، على شاشة القفل وقت التمرين.',
-      tnLatn: 'El compte à rebours mta3 el repos w série el jeya, 3la écran el 9fel wa9t el sport.',
+      en: 'Your next set with Start and Done buttons, and the rest countdown, on the lock screen while you train.',
+      fr: 'Ta prochaine série avec les boutons Commencer et Fait, et le compte à rebours du repos, sur l’écran de verrouillage pendant la séance.',
+      tn: 'السيري الجاية بالبوطونات ابدا وكمّلت، والعدّ متاع الراحة، على شاشة القفل وقت التمرين.',
+      tnLatn: 'Série el jeya bel boutons Ebda w Kammalt, w el compte à rebours mta3 el repos, 3la écran el 9fel wa9t el sport.',
     },
-    importance: Notifications.AndroidImportance.LOW,
+    importance: Notifications.AndroidImportance.DEFAULT,
+    silent: true,
   },
   'rest-over': {
     name: { en: 'Rest timer', fr: 'Minuteur de repos', tn: 'وقت الراحة', tnLatn: 'Wa9t el repos' },
@@ -77,6 +79,8 @@ const CHANNELS: Record<ChannelId, { name: LocalizedText; description: LocalizedT
 /** Creates (or renames, after a language change) the channels. Android shows them in the app's settings. */
 export async function setupChannels(language: Language) {
   if (Platform.OS !== 'android') return;
+  // 1.2.0's low-importance workout channel: replaced by 'workout-live' (importance can't change).
+  await Notifications.deleteNotificationChannelAsync('workout').catch(() => undefined);
   for (const [id, c] of Object.entries(CHANNELS)) {
     await Notifications.setNotificationChannelAsync(id, {
       name: pick(c.name, language),
@@ -84,9 +88,9 @@ export async function setupChannels(language: Language) {
       importance: c.importance,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       lightColor: VOLT,
-      enableVibrate: !!c.buzz || c.importance >= Notifications.AndroidImportance.DEFAULT,
+      enableVibrate: !c.silent && (!!c.buzz || c.importance >= Notifications.AndroidImportance.DEFAULT),
       vibrationPattern: c.buzz ? [0, 400, 200, 400] : undefined,
-      sound: c.importance >= Notifications.AndroidImportance.DEFAULT ? 'default' : null,
+      sound: !c.silent && c.importance >= Notifications.AndroidImportance.DEFAULT ? 'default' : null,
       showBadge: false,
     });
   }
@@ -161,22 +165,6 @@ export async function cancelRestOver() {
   await Notifications.cancelScheduledNotificationAsync(REST_ID).catch(() => undefined);
   await Notifications.dismissNotificationAsync(REST_ID).catch(() => undefined);
 }
-
-/** The lock-screen countdown (Android); disappears by itself when the rest ends. */
-export function liveRest(endAt: number, title: string, body: string) {
-  showRest(endAt, title, body, 'workout', VOLT);
-}
-
-/** The workout in progress, without a clock. */
-export function liveSession(title: string, body: string) {
-  showSession(title, body, 'workout', VOLT);
-}
-
-export function liveClear() {
-  clearLive();
-}
-
-export { liveTimerAvailable };
 
 /** A notification 10 seconds from now: time to lock the phone and see it there. */
 export async function sendTest(title: string, body: string) {

@@ -20,6 +20,7 @@ import { fontAssets, useTokens } from '@/theme';
 import { useAutoBackup } from '@/hooks/useAutoBackup';
 import { useCloudBackup } from '@/hooks/useGoogleSync';
 import { useNotificationSync } from '@/hooks/useNotifications';
+import { useLiveWorkoutSync } from '@/hooks/useLiveWorkout';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -58,6 +59,8 @@ function RootLayoutNav() {
   useCloudBackup();
   // Reminders follow the data (training days, meals, Ramadan), and taps open their screen.
   useNotificationSync();
+  // Sets logged from the lock screen reach the workout, even after Android closed the app.
+  useLiveWorkoutSync();
 
   // Paint the window behind every screen in the theme's ground (no white flash).
   useEffect(() => {

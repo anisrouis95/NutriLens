@@ -163,6 +163,43 @@ Lock screen and notification shade, on every Android phone:
 Watches: Garmin and Amazfit show these notifications when Tounsi Fit is
 allowed in the watch app's notification settings.
 
+### 4.3 Logging from the lock screen (1.2.1)
+
+The workout notification walks through the sets with its own buttons, without
+unlocking the phone and even after Android has closed the app
+(`modules/live-timer/…/LiveWorkout.kt`):
+
+| On the lock screen | Buttons |
+|---|---|
+| Next set: "Leg Press · Set 2/3 · 30 kg × 10" | **Start set** (or **Log set** with timing off) |
+| Set under way, clock counting up | **Done** |
+| Rest countdown, next set named | **Easy · Good · Hard** for the set just done, then **Start set** to cut the rest short |
+| All sets done | open the app to save |
+
+- Done logs the set at its target weight and reps: a lock screen can't type.
+  A different number is fixed in the app afterwards.
+- Every press is queued; the app applies the queue when it next runs (at once
+  while it runs), with the same rules as a tap in the app: the rest clock,
+  Easy/Hard moving the next sets. Opening the app after Android closed it
+  during a workout goes straight back to that workout.
+- The rest end is an alarm the phone keeps: it buzzes and turns the
+  notification into the next set (exact when "Alarms & reminders" is allowed).
+- The channel is silent but not "low", so Android keeps it expanded with its
+  buttons on the lock screen; on Android 16 it asks to be a Live Update.
+
+In the app, the dock follows the same steps: **Start set** → a clock counting
+up → **Done**. Each set keeps its start and end (`LoggedSet.startedAt`,
+`doneAt`), which gives:
+
+- the set's length under its number;
+- **tempo**: under 1.5 s per rep the exercise page says the weight is being
+  bounced and asks for a 2–3 second lowering;
+- **real rests**: the finish sheet shows lifting time and the average rest
+  taken against the planned one.
+
+Profile → Notifications → **Start and Done buttons** turns timing off (one
+Log set tap per set, here and on the lock screen).
+
 ## 5. Calisthenics
 
 Training style (Profile → Training style):
@@ -241,6 +278,10 @@ All optional fields; old data and backups keep working.
 9. Swap an exercise from the ⓘ page during a workout: its sets are there.
 10. Train → Calisthenics → Mixed → answer the test: push, pull, row, dip and core
     slots become ladders; legs stay on machines.
+11. (1.2.1) Start a workout, lock the phone: the notification shows the next set
+    with **Start set**. Start, Done, rate it, all locked; open the app: the sets
+    are logged with their times. If the buttons don't show, swipe the
+    notification down to expand it.
 
 ## 8. Later (1.3+)
 

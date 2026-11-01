@@ -168,6 +168,9 @@ export interface LoggedSet {
   /** Typed in by hand: later changes to the sets above never overwrite it. */
   manual?: boolean;
   effort?: Effort;
+  /** Start set / Done (epoch ms), in the app or on the lock screen: set length and real rests. */
+  startedAt?: number;
+  doneAt?: number;
 }
 
 export interface WorkoutSession {
@@ -250,6 +253,8 @@ export interface AppSettings {
   ladderSteps?: Record<string, number>;
   /** The Train tab's "turn on notifications" card was answered. */
   askedNotifications?: boolean;
+  /** Start → Done for each set (times it); off: one Log set tap. Missing = on. */
+  timeSets?: boolean;
 }
 
 export interface TrainingSchedule {

@@ -3,4 +3,9 @@
   <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
   <!-- Android 16: the rest countdown as a Live Update (status bar chip, Samsung Now Bar). -->
   <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+
+  <application>
+    <!-- The lock-screen workout's buttons and its end-of-rest alarm (LiveWorkout.kt). -->
+    <receiver android:name="expo.modules.livetimer.LiveActionReceiver" android:exported="false" />
+  </application>
 </manifest>

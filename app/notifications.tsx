@@ -99,6 +99,7 @@ export default function NotificationsScreen() {
   const [ramadan] = useRamadanSettings();
   const ns = notificationSettings(settings.notifications);
   const schedule = scheduleOf(settings, profile);
+  const timeSets = settings.timeSets ?? true;
 
   // Phone state, read again whenever the user comes back from the phone's settings.
   const [perm, setPerm] = useState<Permission>('undetermined');
@@ -214,15 +215,42 @@ export default function NotificationsScreen() {
             divider
           />
           <ListItem
-            title={L({ en: 'Workout in progress', fr: 'Séance en cours', tn: 'حصّة قاعدة', tnLatn: 'Séance 9a3da' })}
+            title={L({ en: 'Workout on the lock screen', fr: 'Séance sur l’écran de verrouillage', tn: 'الحصّة على شاشة القفل', tnLatn: 'Séance 3la écran el 9fel' })}
             supporting={L({
-              en: 'Your next set, in the notification shade while you train.',
-              fr: 'Ta prochaine série, dans le volet des notifications pendant la séance.',
-              tn: 'السيري الجاية، في الإشعارات وقت التمرين.',
-              tnLatn: 'Série el jeya, fel notifications wa9t el sport.',
+              en: 'Your next set with buttons to log it, without unlocking.',
+              fr: 'Ta prochaine série avec des boutons pour la noter, sans déverrouiller.',
+              tn: 'السيري الجاية بالبوطونات باش تسجّلها، بلاش ما تحلّ التليفون.',
+              tnLatn: 'Série el jeya bel boutons bech tsajjelha, blech ma t7el el téléphone.',
             })}
             leading={(c) => <Dumbbell size={22} color={c} />}
-            trailing={<Toggle value={ns.ongoing} onChange={(v) => set({ ongoing: v }, v)} label={L({ en: 'Workout in progress', fr: 'Séance en cours', tn: 'حصّة قاعدة', tnLatn: 'Séance 9a3da' })} />}
+            trailing={<Toggle value={ns.ongoing} onChange={(v) => set({ ongoing: v }, v)} label={L({ en: 'Workout on the lock screen', fr: 'Séance sur l’écran de verrouillage', tn: 'الحصّة على شاشة القفل', tnLatn: 'Séance 3la écran el 9fel' })} />}
+            divider
+          />
+          <ListItem
+            title={L({ en: 'Start and Done buttons', fr: 'Boutons Commencer et Fait', tn: 'بوطونات ابدا وكمّلت', tnLatn: 'Boutons Ebda w Kammalt' })}
+            supporting={
+              timeSets
+                ? L({
+                    en: 'Times each set and your real rests. Off: one Log set tap.',
+                    fr: 'Chronomètre chaque série et tes vrais repos. Désactivé : un seul appui sur Valider.',
+                    tn: 'يحسب وقت كل سيري والراحة بالصحيح. مسكّر: كبسة وحدة على سجّل.',
+                    tnLatn: 'Ya7seb wa9t kol série w el repos bel s7i7. Msakker: kabsa wa7da 3la Sajjel.',
+                  })
+                : L({
+                    en: 'Off: one Log set tap per set. On: Start, then Done, to time each set.',
+                    fr: 'Désactivé : un appui sur Valider par série. Activé : Commencer puis Fait, pour chronométrer.',
+                    tn: 'مسكّر: كبسة وحدة على سجّل في كل سيري. مشعول: ابدا ومبعد كمّلت، باش تحسب الوقت.',
+                    tnLatn: 'Msakker: kabsa wa7da 3la Sajjel f kol série. Mcha3el: Ebda w ba3d Kammalt, bech ta7seb el wa9t.',
+                  })
+            }
+            leading={(c) => <Timer size={22} color={c} />}
+            trailing={
+              <Toggle
+                value={timeSets}
+                onChange={(v) => updateSettings({ timeSets: v })}
+                label={L({ en: 'Start and Done buttons', fr: 'Boutons Commencer et Fait', tn: 'بوطونات ابدا وكمّلت', tnLatn: 'Boutons Ebda w Kammalt' })}
+              />
+            }
           />
         </Group>
       </Section>

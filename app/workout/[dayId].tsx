@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useReducedMotion } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, ArrowLeftRight, ArrowRight, ChevronRight, Dumbbell, Info, Plus, Timer, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Check, ChevronRight, Dumbbell, Info, Play, Plus, Timer, TrendingUp } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { decimalComma } from '@/lib/i18n';
 import { isFastingDay } from '@/lib/ramadan';
@@ -51,7 +51,10 @@ import SwapSheet from '@/components/train/SwapSheet';
 import { conflicts, LIMITATION_NAMES } from '@/lib/swap';
 import { EFFORT_HELP, EFFORT_NAMES, NOTE_COPY, reasonCopy } from '@/components/train/coachCopy';
 import { notificationSettings } from '@/lib/reminders';
-import { cancelRestOver, liveClear, liveRest, liveSession, scheduleRestOver } from '@/services/notifications';
+import { cancelRestOver, scheduleRestOver, VOLT } from '@/services/notifications';
+import { argb, drainLive, liveTimerAvailable, stopLive, updateLive } from '@/modules/live-timer';
+import { applyLiveEvents, indexOfKey, secondsPerRep, sessionTiming, setKey } from '@/lib/liveEvents';
+import { liveWorkout } from '@/hooks/useLiveWorkout';
 import type { MovementSlot } from '@/data/exerciseCuration';
 import { newId } from '@/lib/storage';
 import { fonts, radius, space, useTokens } from '@/theme';
@@ -74,6 +77,8 @@ function nameSize(name: string) {
 type Row = { s: LoggedSet; i: number };
 /** What a rated set changed for the sets after it (`n` = its number). */
 type Note = { n: number; change: Adjustment };
+/** A set lifted too fast: its number and seconds per rep. */
+type Tempo = { n: number; spr: number };
 /** The "how was it?" row above the rest clock. */
 const EFFORT_HEIGHT = 72;
 /** One exercise of the session: `planIndex`/`planId` locate it in the program, `pe` is what is done today (after a swap). */
@@ -167,9 +172,21 @@ function SetRow({
   const ink = current ? t.accentText : set.done ? t.text : t.textSecondary;
   return (
     <View style={[styles.setRow, { borderBottomColor: t.hairline }]}>
-      <Txt variant="overline" color={current ? t.text : t.textTertiary} style={{ width: SET_COL }}>
-        {L({ en: 'Set {{n}}', fr: 'Série {{n}}', tn: 'سيري {{n}}', tnLatn: 'Série {{n}}' }, { n })}
-      </Txt>
+      <View style={{ width: SET_COL }}>
+        <Txt variant="overline" color={current ? t.text : t.textTertiary}>
+          {L({ en: 'Set {{n}}', fr: 'Série {{n}}', tn: 'سيري {{n}}', tnLatn: 'Série {{n}}' }, { n })}
+        </Txt>
+        {/* How long the set took, when it was timed with Start / Done. */}
+        {set.done && set.startedAt && set.doneAt && set.doneAt > set.startedAt ? (
+          <Txt variant="caption" tone="tertiary" numberOfLines={1}>
+            {`${Math.round((set.doneAt - set.startedAt) / 1000)}${NB}s`}
+          </Txt>
+        ) : !set.done && set.startedAt ? (
+          <Txt variant="caption" tone="accent" numberOfLines={1}>
+            {L({ en: 'Now', fr: 'En cours', tn: 'توّا', tnLatn: 'Taw' })}
+          </Txt>
+        ) : null}
+      </View>
       <NumInput
         value={set.weightKg}
         onChange={onWeight}
@@ -211,6 +228,7 @@ const ExercisePage = memo(function ExercisePage({
   bottomSpace,
   target,
   note,
+  tempo,
   showWarmup,
   onUpdate,
   onToggle,
@@ -224,6 +242,8 @@ const ExercisePage = memo(function ExercisePage({
   target: Target;
   /** What the last rated set changed in the sets below it. */
   note?: Note;
+  /** A set of this exercise lifted too fast. */
+  tempo?: Tempo;
   showWarmup: boolean;
   onUpdate: (globalIndex: number, patch: Pick<Partial<LoggedSet>, 'weightKg' | 'reps'>) => void;
   onToggle: (globalIndex: number, restSec: number) => void;
@@ -380,6 +400,21 @@ const ExercisePage = memo(function ExercisePage({
             </Txt>
           </View>
         ) : null}
+        {tempo ? (
+          <View style={[styles.note, { backgroundColor: t.dangerSoft }]} accessibilityLiveRegion="polite">
+            <Txt variant="label" tone="danger">
+              {L(
+                {
+                  en: 'Set {{n}}: {{s}} s per rep, too fast. Lower the weight in 2–3 seconds: safer for your joints, more work for the muscle.',
+                  fr: 'Série {{n}} : {{s}} s par répétition, trop rapide. Descends la charge en 2–3 secondes : plus sûr pour tes articulations, plus de travail pour le muscle.',
+                  tn: 'السيري {{n}}: {{s}} ثانية في المرّة، فيسع برشا. هبّط الثقل في 2–3 ثواني: أسلم للمفاصل، وخدمة أكثر للعضلة.',
+                  tnLatn: 'Série {{n}}: {{s}} s fel marra, fissa3 barcha. Habbet el charge f 2–3 secondes: aslem lel mafasel, w 5edma akther lel muscle.',
+                },
+                { n: tempo.n, s: fmt(tempo.spr, 1) },
+              )}
+            </Txt>
+          </View>
+        ) : null}
 
         <View style={[styles.target, { borderColor: t.hairline }]}>
           <View style={styles.targetHead}>
@@ -465,6 +500,30 @@ function RestStrip({ left, fraction, onAdd, onSkip }: { left: number; fraction: 
         )}
       </View>
       <ProgressLine value={fraction} height={3} />
+    </View>
+  );
+}
+
+/** The set under way: which one, and a clock counting up from Start. */
+function SetClock({ startedAt, label }: { startedAt: number; label: string }) {
+  const t = useTokens();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+  const sec = Math.max(0, Math.floor((now - startedAt) / 1000));
+  return (
+    <View style={styles.slot}>
+      <View style={styles.restRow}>
+        <Timer size={20} color={t.accentText} />
+        <Txt variant="overline" color={t.accentText} style={{ flex: 1 }} numberOfLines={1}>
+          {label}
+        </Txt>
+        <Txt variant="numLarge" style={styles.restClock}>
+          {`${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`}
+        </Txt>
+      </View>
     </View>
   );
 }
@@ -650,9 +709,9 @@ export default function WorkoutScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [day, profile]);
 
-  // Persist progress so leaving the screen doesn't lose the workout.
+  // Persist progress so leaving the screen (or Android closing the app) doesn't lose the workout.
   useEffect(() => {
-    if (session && session.sets.some((s) => s.done)) saveSession(session);
+    if (session && session.sets.some((s) => s.done || s.startedAt)) saveSession(session);
   }, [session, saveSession]);
 
   const pages: Page[] = useMemo(() => {
@@ -719,60 +778,111 @@ export default function WorkoutScreen() {
     };
   }, []);
 
-  // The phone's notification for this workout: the rest countdown while resting, else the next set.
+  // The workout on the lock screen (modules/live-timer): the next set with Start / Done
+  // (or Log set), the rest countdown with Easy / Good / Hard, working without the app.
+  // Without it (web preview, "Workout in progress" off) only the rest-over alert remains.
   const ns = notificationSettings(settings.notifications);
-  /** "Leg Press, set 2: 30 kg × 10" for the first set still to do, skipping `skip` (the one just logged). */
-  const upNext = (skip?: number) => {
-    const start = Math.max(0, pages.findIndex((p) => p.rows.some(({ i }) => i === skip)));
-    for (const p of [...pages.slice(start), ...pages.slice(0, start)]) {
-      const n = p.rows.findIndex(({ s, i }) => !s.done && i !== skip);
-      if (n < 0) continue;
-      const s = p.rows[n].s;
-      const unitText = p.pe.timed ? 's' : L({ en: 'reps', fr: 'rép.', tn: 'مرّات', tnLatn: 'reps' });
-      return L(
-        { en: 'Next: {{name}}, set {{n}} · {{what}}', fr: 'Ensuite : {{name}}, série {{n}} · {{what}}', tn: 'اللي بعدو: {{name}}، سيري {{n}} · {{what}}', tnLatn: 'Eli ba3dou: {{name}}, série {{n}} · {{what}}' },
-        { name: exerciseName(p.ex, language), n: n + 1, what: s.weightKg ? `${fmt(s.weightKg, Number.isInteger(s.weightKg) ? 0 : 1)} kg × ${s.reps}` : `${s.reps} ${unitText}` },
-      );
+  const timeSets = settings.timeSets ?? true;
+  const live = liveTimerAvailable && ns.ongoing;
+  const unitOf = (p: Page) => (p.pe.timed ? 's' : L({ en: 'reps', fr: 'rép.', tn: 'مرّات', tnLatn: 'reps' }));
+  const what = (p: Page, s: LoggedSet) => (s.weightKg ? `${fmt(s.weightKg, Number.isInteger(s.weightKg) ? 0 : 1)} kg × ${s.reps}` : `${s.reps} ${unitOf(p)}`);
+  /** Sets still to do: a set under way first, then from the open exercise on (then those before it). */
+  const remaining = (skip?: number) => {
+    const out: { p: Page; n: number; i: number }[] = [];
+    for (const p of [...pages.slice(index), ...pages.slice(0, index)]) {
+      p.rows.forEach(({ s, i }, n) => {
+        if (!s.done && i !== skip) out.push({ p, n, i });
+      });
     }
-    return L({ en: 'Last set done: finish and save your workout.', fr: 'Dernière série faite : termine et enregistre ta séance.', tn: 'آخر سيري تعملت: كمّل وسجّل الحصّة.', tnLatn: 'E5er série t3malet: kammel w sajjel séance.' });
+    const working = out.findIndex(({ i }) => session?.sets[i].startedAt);
+    return working > 0 ? [out[working], ...out.slice(0, working), ...out.slice(working + 1)] : out;
   };
-  const restTitle = day ? L({ en: 'Rest · {{day}}', fr: 'Repos · {{day}}', tn: 'راحة · {{day}}', tnLatn: 'Repos · {{day}}' }, { day: L(day.name) }) : '';
+  /** "Next: Leg Press, set 2 · 30 kg × 10" for the rest-over alert without the lock-screen workout. */
+  const upNext = (skip?: number) => {
+    const next = remaining(skip)[0];
+    if (!next) return L({ en: 'Last set done: finish and save your workout.', fr: 'Dernière série faite : termine et enregistre ta séance.', tn: 'آخر سيري تعملت: كمّل وسجّل الحصّة.', tnLatn: 'E5er série t3malet: kammel w sajjel séance.' });
+    return L(
+      { en: 'Next: {{name}}, set {{n}} · {{what}}', fr: 'Ensuite : {{name}}, série {{n}} · {{what}}', tn: 'اللي بعدو: {{name}}، سيري {{n}} · {{what}}', tnLatn: 'Eli ba3dou: {{name}}, série {{n}} · {{what}}' },
+      { name: exerciseName(next.p.ex, language), n: next.n + 1, what: what(next.p, next.p.rows[next.n].s) },
+    );
+  };
   const restOverTitle = L({ en: 'Rest over: go!', fr: 'Repos fini : c’est reparti !', tn: 'الراحة وفات: هيّا!', tnLatn: 'El repos wfé: hayya!' });
-  /** Countdown on the lock screen and the buzz at its end. */
+  /** The buzz at the end of a rest, when the lock-screen workout (which buzzes itself) isn't there. */
   const announceRest = (endAt: number, skip?: number) => {
-    if (!ns.rest) return;
-    const next = upNext(skip);
-    liveRest(endAt, restTitle, next);
-    scheduleRestOver(endAt, restOverTitle, next).catch(() => undefined);
+    if (live || !ns.rest) return;
+    scheduleRestOver(endAt, restOverTitle, upNext(skip)).catch(() => undefined);
   };
-  const doneNow = session?.sets.filter((s) => s.done).length ?? 0;
-  const totalNow = session?.sets.length ?? 0;
+
+  const [rating, setRating] = useState<number | null>(null);
+  const working = session ? session.sets.findIndex((s) => s.startedAt && !s.done) : -1;
+  // Hand the workout to the lock screen whenever it changes here.
   useEffect(() => {
-    if (!day || restEnd) return;
-    if (!ns.ongoing) {
-      liveClear();
+    if (!day || !session || !pages.length) return;
+    if (!live) {
+      stopLive();
       return;
     }
-    liveSession(
-      L({ en: '{{day}} · {{done}}/{{total}} sets', fr: '{{day}} · {{done}}/{{total}} séries', tn: '{{day}} · {{done}}/{{total}} سيريات', tnLatn: '{{day}} · {{done}}/{{total}} séries' }, { day: L(day.name), done: doneNow, total: totalNow }),
-      upNext(),
-    );
+    const items = remaining().map(({ p, n, i }) => ({
+      key: setKey(session.sets, i),
+      name: exerciseName(p.ex, language),
+      set: L({ en: 'Set {{n}}/{{t}}', fr: 'Série {{n}}/{{t}}', tn: 'سيري {{n}}/{{t}}', tnLatn: 'Série {{n}}/{{t}}' }, { n: n + 1, t: p.rows.length }),
+      detail: what(p, p.rows[n].s),
+      restSec: p.pe.restSec,
+    }));
+    const resting = !!restEnd && restEnd > Date.now();
+    updateLive({
+      dayId: day.id,
+      day: L(day.name),
+      done: session.sets.filter((s) => s.done).length,
+      total: session.sets.length,
+      phase: working >= 0 ? 'working' : !items.length ? 'finished' : resting ? 'resting' : 'ready',
+      items,
+      setStartedAt: working >= 0 ? session.sets[working].startedAt : undefined,
+      restEndsAt: resting && restEnd ? restEnd : undefined,
+      ratingKey: rating !== null && session.sets[rating] ? setKey(session.sets, rating) : undefined,
+      timeSets,
+      buzz: ns.rest,
+      channel: 'workout-live',
+      alertChannel: 'rest-over',
+      color: argb(VOLT),
+      labels: {
+        start: L({ en: 'Start set', fr: 'Commencer', tn: 'ابدا السيري', tnLatn: 'Ebda série' }),
+        logSet: L({ en: 'Log set', fr: 'Valider la série', tn: 'سجّل السيري', tnLatn: 'Sajjel série' }),
+        done: L({ en: 'Done', fr: 'Fait', tn: 'كمّلت', tnLatn: 'Kammalt' }),
+        easy: L(EFFORT_NAMES.easy),
+        good: L(EFFORT_NAMES.good),
+        hard: L(EFFORT_NAMES.hard),
+        working: L({ en: 'In progress', fr: 'En cours', tn: 'قاعد', tnLatn: '9a3ed' }),
+        rest: L({ en: 'Rest', fr: 'Repos', tn: 'راحة', tnLatn: 'Repos' }),
+        next: L({ en: 'next', fr: 'ensuite', tn: 'اللي بعدو', tnLatn: 'ba3dou' }),
+        restOver: restOverTitle,
+        allDone: L({ en: 'All sets done', fr: 'Toutes les séries faites', tn: 'السيريات الكل تعملو', tnLatn: 'Les séries lkol t3amlou' }),
+        saveHint: L({ en: 'Open Tounsi Fit to save your workout.', fr: 'Ouvre Tounsi Fit pour enregistrer ta séance.', tn: 'حلّ Tounsi Fit باش تسجّل الحصّة.', tnLatn: '7el Tounsi Fit bech tsajjel séance.' }),
+        progress: L({ en: '{{day}} · {{done}}/{{total}} sets', fr: '{{day}} · {{done}}/{{total}} séries', tn: '{{day}} · {{done}}/{{total}} سيريات', tnLatn: '{{day}} · {{done}}/{{total}} séries' }),
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [day, restEnd, ns.ongoing, doneNow, totalNow, language]);
-  // Leaving the workout (saved or not) takes its notification and pending alert with it.
-  useEffect(
-    () => () => {
-      liveClear();
+  }, [session, restEnd, rating, live, timeSets, ns.rest, language, index, pages]);
+
+  // Presses on the lock screen, applied here with this screen's rules (rest clock, coach).
+  const takeRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    liveWorkout.take = () => takeRef.current();
+    takeRef.current();
+    // Leaving the workout (saved or not) takes its notification and pending alert with it.
+    return () => {
+      liveWorkout.take = null;
+      stopLive();
       cancelRestOver();
-    },
-    [],
-  );
+    };
+  }, []);
 
   const [finishOpen, setFinishOpen] = useState(false);
   const [swapPage, setSwapPage] = useState<Page | null>(null);
-  // The set just logged, waiting for "how was it?", and what rated sets changed per exercise.
-  const [rating, setRating] = useState<number | null>(null);
+  // What rated sets changed per exercise, and sets lifted too fast (`rating`, the set waiting
+  // for "how was it?", sits with the lock-screen state above).
   const [notes, setNotes] = useState<Record<string, Note>>({});
+  const [tempo, setTempo] = useState<Record<string, Tempo>>({});
 
   if (!day || !session || !pages.length) {
     return (
@@ -811,26 +921,48 @@ export default function WorkoutScreen() {
 
   const toggleDone = (globalIndex: number, restSec: number) => {
     const set = session.sets[globalIndex];
-    patchSet(globalIndex, set.done ? { done: false, effort: undefined } : { done: true });
-    if (!set.done) {
-      // StampCheck gives a success haptic with its stamp; without motion it doesn't.
-      if (reduce) hapticTap('light');
-      const endAt = Date.now() + restSec * 1000;
-      setRestEnd(endAt);
-      setRestTotal(restSec);
-      setNow(Date.now());
-      setRating(globalIndex);
-      if (restSec > 0) announceRest(endAt, globalIndex);
-    } else if (rating === globalIndex) {
-      setRating(null);
+    if (set.done) {
+      patchSet(globalIndex, { done: false, effort: undefined, startedAt: undefined, doneAt: undefined });
+      if (rating === globalIndex) setRating(null);
+      return;
     }
+    const doneAt = Date.now();
+    patchSet(globalIndex, { done: true, doneAt });
+    // StampCheck gives a success haptic with its stamp; without motion it doesn't.
+    if (reduce) hapticTap('light');
+    startRest(doneAt + restSec * 1000, restSec, globalIndex);
+    checkTempo(globalIndex, { ...set, doneAt });
+  };
+
+  const startRest = (endAt: number, restSec: number, globalIndex: number) => {
+    setRating(globalIndex);
+    if (restSec <= 0 || endAt <= Date.now()) return;
+    setRestEnd(endAt);
+    setRestTotal(restSec);
+    setNow(Date.now());
+    announceRest(endAt, globalIndex);
+  };
+
+  /** Start set: stamps the set and ends the rest (the clock then runs in the dock). */
+  const startSet = (globalIndex: number) => {
+    patchSet(globalIndex, { startedAt: Date.now() });
+    setRestEnd(null);
+    setRating(null);
+    cancelRestOver();
+  };
+
+  /** Under 1.5 s per rep the weight is being bounced, not lifted: say so for that exercise. */
+  const checkTempo = (globalIndex: number, set: LoggedSet) => {
+    const spr = secondsPerRep(set);
+    const p = pages.find((x) => x.rows.some(({ i }) => i === globalIndex));
+    if (!p || p.pe.timed || spr === null) return;
+    const n = p.rows.findIndex(({ i }) => i === globalIndex) + 1;
+    setTempo(({ [set.exerciseId]: _, ...rest }) => (spr < 1.5 ? { ...rest, [set.exerciseId]: { n, spr } } : rest));
   };
 
   /** Records how a set felt, and moves the sets still to come up or down when it calls for it. */
-  const rate = (effort: Effort) => {
-    if (rating === null) return;
-    const globalIndex = rating;
-    setRating(null);
+  const rateSet = (globalIndex: number, effort: Effort) => {
+    if (rating === globalIndex) setRating(null);
     const set = { ...session.sets[globalIndex], effort };
     const ratedPage = pages.find((p) => p.rows.some(({ i }) => i === globalIndex));
     if (!ratedPage) {
@@ -856,6 +988,28 @@ export default function WorkoutScreen() {
         : s,
     );
     if (change && session.sets.some(follows)) setNotes((prev) => ({ ...prev, [set.exerciseId]: { n: n + 1, change } }));
+  };
+  const rate = (effort: Effort) => rating !== null && rateSet(rating, effort);
+
+  // Lock-screen presses: stamps and logs first, then the rest clock and the coach as if tapped here.
+  takeRef.current = () => {
+    const events = drainLive();
+    if (!events.length) return;
+    setSession((s) => (s ? applyLiveEvents(s, events) : s));
+    for (const e of events) {
+      const i = indexOfKey(session.sets, e.key);
+      if (i < 0) continue;
+      const p = pages.find((x) => x.rows.some((r) => r.i === i));
+      if (e.type === 'start') {
+        setRestEnd(null);
+        setRating(null);
+      } else if (e.type === 'done') {
+        startRest(e.at + (p?.pe.restSec ?? 0) * 1000, p?.pe.restSec ?? 0, i);
+        checkTempo(i, { ...session.sets[i], startedAt: e.startedAt ?? session.sets[i].startedAt, doneAt: e.at });
+      } else if (e.effort) {
+        rateSet(i, e.effort);
+      }
+    }
   };
 
   const addSet = (page: Page) =>
@@ -917,6 +1071,11 @@ export default function WorkoutScreen() {
 
   const doneSets = session.sets.filter((s) => s.done);
   const doneCount = doneSets.length;
+  // Start / Done stamps: time under the bar and the rests really taken, against the plan's.
+  const timing = sessionTiming(session.sets);
+  const donePages = pages.filter((p) => p.rows.some(({ s }) => s.done));
+  const plannedRest = donePages.length ? donePages.reduce((sum, p) => sum + p.pe.restSec, 0) / donePages.length : 0;
+  const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
   const total = session.sets.length;
   const minutes = Math.max(0, Math.round((clockNow - Date.parse(session.startedAt)) / 60000));
   const volume = doneSets.reduce((sum, x) => sum + x.weightKg * x.reps, 0);
@@ -974,8 +1133,30 @@ export default function WorkoutScreen() {
   const nextRowPos = page.rows.findIndex(({ s }) => !s.done);
   const isLast = index === pages.length - 1;
   const name = exerciseName(page.ex, language);
-  const dockAction =
-    nextRowPos >= 0
+  // A set under way (Start pressed, here or on the lock screen), wherever it is.
+  const workingPage = working >= 0 ? pages.find((p) => p.rows.some(({ i }) => i === working)) : undefined;
+  const workingN = workingPage ? workingPage.rows.findIndex(({ i }) => i === working) + 1 : 0;
+  const dockAction = workingPage
+    ? {
+        label: L({ en: 'Done · set {{n}}', fr: 'Fait · série {{n}}', tn: 'كمّلت · سيري {{n}}', tnLatn: 'Kammalt · série {{n}}' }, { n: workingN }),
+        a11y: L(
+          { en: 'Done: set {{n}} of {{name}}', fr: 'Fait : série {{n}} de {{name}}', tn: 'كمّلت: السيري {{n}} متاع {{name}}', tnLatn: 'Kammalt: série {{n}} mta3 {{name}}' },
+          { n: workingN, name: exerciseName(workingPage.ex, language) },
+        ),
+        onPress: () => toggleDone(working, workingPage.pe.restSec),
+        icon: (c: string) => <Check size={20} color={c} strokeWidth={2.8} />,
+      }
+    : nextRowPos >= 0 && timeSets
+      ? {
+          label: L({ en: 'Start set {{n}}', fr: 'Commencer la série {{n}}', tn: 'ابدا السيري {{n}}', tnLatn: 'Ebda série {{n}}' }, { n: nextRowPos + 1 }),
+          a11y: L(
+            { en: 'Start set {{n}} of {{name}}', fr: 'Commencer la série {{n}} de {{name}}', tn: 'ابدا السيري {{n}} متاع {{name}}', tnLatn: 'Ebda série {{n}} mta3 {{name}}' },
+            { n: nextRowPos + 1, name },
+          ),
+          onPress: () => startSet(page.rows[nextRowPos].i),
+          icon: (c: string) => <Play size={20} color={c} />,
+        }
+    : nextRowPos >= 0
       ? {
           label: L({ en: 'Log set {{n}}', fr: 'Valider la série {{n}}', tn: 'سجّل السيري {{n}}', tnLatn: 'Sajjel série {{n}}' }, { n: nextRowPos + 1 }),
           a11y: L(
@@ -1087,6 +1268,7 @@ export default function WorkoutScreen() {
             bottomSpace={bottomSpace}
             target={targetOf(item.pe, item.rows.length)}
             note={notes[item.pe.exerciseId]}
+            tempo={tempo[item.pe.exerciseId]}
             showWarmup={i === 0 && doneCount === 0}
             onUpdate={editSet}
             onToggle={toggleDone}
@@ -1113,7 +1295,15 @@ export default function WorkoutScreen() {
       {!keyboard ? (
         <View style={[styles.dock, { paddingBottom: insets.bottom + space.md, backgroundColor: t.ground, borderTopColor: t.hairline }]}>
           {ratingRow ? <EffortRow n={ratingRow} onRate={rate} /> : null}
-          {restEnd ? (
+          {workingPage && session.sets[working]?.startedAt ? (
+            <SetClock
+              startedAt={session.sets[working].startedAt as number}
+              label={L(
+                { en: 'Set {{n}} · {{name}}', fr: 'Série {{n}} · {{name}}', tn: 'سيري {{n}} · {{name}}', tnLatn: 'Série {{n}} · {{name}}' },
+                { n: workingN, name: exerciseName(workingPage.ex, language) },
+              )}
+            />
+          ) : restEnd ? (
             <RestStrip
               left={restLeft}
               fraction={restFraction}
@@ -1171,6 +1361,19 @@ export default function WorkoutScreen() {
         <View style={{ marginTop: space.lg }}>
           <ProgressLine value={total ? doneCount / total : 0} />
         </View>
+        {timing.rests.length ? (
+          <Txt variant="caption" tone="secondary" style={{ marginTop: space.md }}>
+            {L(
+              {
+                en: 'Lifting {{lift}} · average rest {{rest}} (planned {{plan}})',
+                fr: 'Effort {{lift}} · repos moyen {{rest}} (prévu {{plan}})',
+                tn: 'خدمة {{lift}} · معدّل الراحة {{rest}} (المبرمج {{plan}})',
+                tnLatn: '5edma {{lift}} · moyenne repos {{rest}} (mbarmej {{plan}})',
+              },
+              { lift: clock(timing.lifting), rest: clock(timing.rests.reduce((a, b) => a + b, 0) / timing.rests.length), plan: clock(plannedRest) },
+            )}
+          </Txt>
+        ) : null}
         {doneCount < total ? (
           <Txt variant="caption" tone="secondary" style={{ marginTop: space.md }}>
             {L({
